@@ -1,0 +1,455 @@
+% -*- root: ../thesis.tex -*-
+%!TEX root = ../thesis.tex
+% this file is called up by thesis.tex
+% content in this file will be fed into the main document
+
+%level followed %by section, subsection
+
+
+% ----------------------- paths to graphics ------------------------
+
+% change according to folder and file names
+\graphicspath{{5/figures/}}
+% ----------------------- contents from here ------------------------
+
+In this section I introduce Crayon, a toolkit for benchmarking ML forecasting models. Crayon contains a set of tools for making fair, accurate and reproducible comparisons between forecasting models. Crayon is available on GitHub under the XXX license. TODO 
+
+In \ref{"sec:reproducibility"}, I argue that in order to achieve proper reproducibility it is necessary that algorithms need to be trained and evaluated on datasets multiple times in order to build up a distribution of error metrics. Crayon is built with this in mind, and the benchmarking functionality described in Section \ref{subsec:benchmarking} makes use of the distribution of errors when benchmarking. In its core, Crayon is built on three core techniques; Runtool configuration files for defining reproducible training jobs, Docker images containing the algorithm to benchmark and the datasets that the algorithm is to be benchmarked on. In the following sections the core functionality of crayon is presented.
+
+\section{Architecture}
+TODO
+
+\section{Algorithms}
+\label{crayon:algorithms}
+In crayon, the \textit{Algorithms} class contains all the information needed in order to execute an algorithm contained in a docker image either on SageMaker or on the local machine. \textit{Algorithm} objects are used internally in Crayon and they are a basic building block for performing hyperparameter tuning and for creating runtool configuration files.
+
+An \textit{Algorithm} object contains information about the \textit{image} to run, the \textit{hyperparameters} to use. If the algorithm should be executed on SageMaker, the specific instance it should be run on can also be set using the \textit{instance} parameter. The \textit{Algorithm} class also optionally accepts a dictionary of regexes to the \textit{metrics} parameter. These regexes are used by SageMaker to extract the any metrics from an algorithms output. Default regexes for GluonTS algorithms are available in the \textit{utils} module of Crayon. In Listing \ref{code:algorithm} an example of how one can use the \textit{Algorithm} class is presented. 
+
+\begin{lstlisting}[language=Python, label={code:algorithm}, caption=Example of the Algorithm class.]
+from crayon import Algorithm
+Algorithm(
+    name="myalgo", 
+    image="my_image", 
+    instance="local",
+    hyperparameters={...},
+    metrics={"abs_error": ... }
+)
+\end{lstlisting}
+
+\section{Datasets}
+\label{crayon:datasets}
+The Crayon Dataset class wraps all the data needed to locate a dataset on your local machine or on AWS S3. There is only two required parameters when creating an object of the Dataset class; the \textit{name} of the dataset \& the \textit{path} leading to the dataset. 
+
+The \textit{path} is a dict which points to the file location(s) of the dataset. If one has a train, test and validation dataset, the items in the \textit{path} will point to these versions of the dataset. Any \textit{meta} information one wish to provide about the dataset in question can be passed through the \textit{meta} parameter. In \ref{code:dataset} an example of how to use the Dataset class is presented. 
+\begin{lstlisting}[language=Python, label={code:dataset}, caption=Example of the Dataset class.]
+from crayon import Dataset
+Dataset(
+    name="electricity",
+    path={
+        "train": "file:///datasets/electricity/train/data.json",
+        "test": "file:///datasets/electricity/test/data.json",
+    },
+    meta={...}
+)
+\end{lstlisting}
+
+\section{Config generation}
+\label{'subsub:config_generation'}
+This section discusses the different tools available in Crayon in order to create runtool compatible config files. These config files are a core part of the Crayon functionality and is used in several internal systems. Thus it is of importance to get an understanding of how these are generated and how these files look like. For further information about how the config files function and additional functionality of them, see the section about the runtool (\ref{subsec:runtool}).  
+
+Through providing an \textit{Algorithm} object \& a \textit{Dataset} object to the \textit{generate\_config}, Crayon can generate a config file compatible with the runtool.  The intention of this file is that by providing the config, the image used and the dataset to another person, that person could rerun your experiments with the exact same configuration. Internally Crayon uses the \textit{generate\_config} function in order to create tuning and benchmarking training jobs.
+
+This function accepts an \textit{Algorithm} and a \textit{Dataset} object as presented in \ref{crayon:algorithms} and \ref{crayon:datasets}. In \ref{code:config_generation} an example of how a config can be generated using Crayon is presented.
+\\
+\begin{lstlisting}[language=Python, label={code:config_generation}, caption=Config generation using Crayon]
+from crayon import Algorithm, Dataset, generate_config
+
+# generate runtool configuration file
+config = generate_config(
+    Algorithm(
+        name="myalgo",
+        image="my_image",
+        hyperparameters={"epochs": 10},
+    ),
+    Dataset(
+        name="my_ds",
+        path={
+            "train": "/datasets/electricity/train/data.json",
+            "test": "/datasets/electricity/test/data.json",
+        },
+    ),
+    "/Users/freccero/Documents/config.yml",
+)
+\end{lstlisting}
+
+After running the code above, a config file is stored to the path provided to \textit{generate\_config}, in this case the config file is stored to \textit{/Users/freccero/Documents/config.yml}. An example of the config file which would be generated by the code in \ref{code:config_generation} is displayed in Listing \ref{code:generated_config}
+\\
+\begin{lstlisting}[label={code:generated_config}, caption=Generated configurations file.]
+my_ds:
+  meta: {}
+  name: my_ds
+  path:
+    test: file:///datasets/electricity/test/data.json
+    train: file://datasets/electricity/train/data.json
+myalgo:
+  hyperparameters:
+    epochs: 10
+  image: my_image
+  instance: local
+  name: myalgo
+\end{lstlisting}
+
+If one does not have a custom dataset but instead wishes to use a reference dataset for training and evaluating the algorithm on, it is possible to use the datasets in GluonTS. The \textit{get\_gluonts\_datasets} function downloads any number of GluonTS datasets onto the local machine and generates a list of Datasets objects which can be passed to the  \textit{generate\_config} function. Example code for doing so is shown in \ref{code:config_generation_gluonts} with the output of the code displayed in \ref{output:config_generation_gluonts}. 
+
+\begin{lstlisting}[language=Python, label={code:config_generation_gluonts}, caption=Config generation using Crayon with gluonts datasets]
+from crayon import Algorithm, Dataset, generate_config, get_gluonts_datasets
+import yaml
+
+# generate runtool configuration file
+config = generate_config(
+    Algorithm(
+        name="myalgo",
+        image="my_image",
+        hyperparameters={"epochs": 10},
+    ),
+    get_gluonts_datasets(["electricity"]),
+    "/Users/freccero/Documents/config.yml",
+)
+
+print(yaml.dump(config))
+\end{lstlisting}
+
+\begin{lstlisting}[label={output:config_generation_gluonts}, caption=Output of \ref{code:config_generation_gluonts}]
+electricity:
+  meta:
+    feat_dynamic_cat: []
+    feat_dynamic_real: []
+    feat_static_cat:
+    - cardinality: '321'
+      name: feat_static_cat
+    feat_static_real: []
+    freq: 1H
+    prediction_length: 24
+    target: null
+  name: electricity
+  path:
+    test: file:///Users/freccero/.mxnet/gluon-ts/datasets/electricity/test/data.json
+    train: file:///Users/freccero/.mxnet/gluon-ts/datasets/electricity/train/data.json
+myalgo:
+  hyperparameters:
+    epochs: 10
+  image: my_image
+  instance: local
+  metrics: null
+  name: myalgo
+\end{lstlisting}
+
+\section{Training}
+Given a config file Crayon can use this file to start training jobs either locally or on AWS SageMaker. The provided config file can be either written by hand or generated using Crayon as described in \ref{'subsub:config_generation'}. Crayon uses the runtool to read config files and dispatch training jobs. 
+
+A training job is started by calling the \textit{crayon.run\_config} method.  \textit{crayon.run\_config} has two required parameters, the config that is to be used along with which algorithm-dataset combination to run. The experiment is defined using the mathematical operators + and * as described in section \ref{subsec:runtool}. 
+
+\subsection{Jobs}
+\label{subsubsec:jobs}
+The \textit{crayon.run\_config} function returns a \textit{Jobs} object. A \textit{Jobs} object makes it easy to investigate training results as it appends any metrics reported by the algorithms across all started jobs to a pandas DataFrame. This makes it easier to analyse the recorded metrics. Furthermore, each item in a \textit{Jobs} object contains all the information required to rerun the job with the exact same configuration. 
+
+\subsection{Local Training}
+If a config is to be run locally, algorithms in the config needs to point to an image which is accessible locally on the users machine. For details of the image requirements, see section TODO. Furthermore, any datasets which the algorithm should be trained on should also be available on the local machine. 
+
+In listing \ref{config:local_training} a configuration file which can be used for local training is displayed. In \ref{code:local_training} code for training the algorithm on the dataset using this config is presented. 
+
+\begin{lstlisting}[label={config:local_training}, caption=Config file for running local training jobs]
+my_algo:
+    image: gluonts:cpu_new
+    hyperparameters:
+        freq: H
+        prediction_length: 24
+        forecaster_name: gluonts.model.deepar.DeepAREstimator
+    instance: local
+
+my_dataset:
+    path:
+        train: file:///datasets/electricity/train/data.json
+        test: file:///datasets/electricity/test/data.json
+\end{lstlisting}
+\begin{lstlisting}[language=Python, label={code:local_training}, caption=Code for running local training jobs using Crayon]
+from crayon import run_config
+
+jobs = run_config(
+    config="config.yml",
+    combination="config.my_algo * config.my_dataset",
+)
+\end{lstlisting}
+
+By executing the code in \ref{code:local_training} Crayon will use the runtool to load the config in \ref{config:local_training} and start training jobs locally through the \textit{local\_run} method of the runtool. The jobs will be executed sequentially. After the jobs finish, Crayon looks for a file named \textit{agg\_metrics.json} or \textit{metrics.json} in the output directory for each job. This file should contain any metrics reported by the algorithm being trained. An example json file is shown in \ref{output:local_job_output} for reference. 
+
+\begin{lstlisting}[label={output:local_job_output}, caption=Example of a training job output file such as \textit{metrics.json} or \textit{agg\_metrics.json}]
+{
+    "MSE": 6703174.123610994,
+    "abs_error": 37402126.36717987,
+    "MASE": 1.62229213532052,
+    "MAPE": 0.23736356524438723
+}
+\end{lstlisting}
+
+\subsection{Cloud training}
+Starting training jobs in the cloud is done similarly as when starting them locally, however some changes needs to be made to the config file as well as to the python script. 
+\\
+\\
+\textbf{Config file changes}
+\\
+The config file needs to refer to an image available in ECR of the AWS account that is to be used. Further, the \textit{instance} in the config file must match one of the instance types which SageMaker offers. Any metrics which the algorithm outputs during training such as accuracy metrics or similar must have a corresponding regex under the metrics tag in the config file. This regex is used by SageMaker to parse the algorithm output for metrics. The final change to the config which needs to be done for running on SageMaker is that any datasets needs to be stored in an AWS S3 bucket instead of locally. 
+\\
+\\
+\textbf{Python script changes}
+\label{sagemaker_requirements}
+\\
+In addition to the above changes to the config file,  three further parameters has to be passed to the \textit{run\_config} function in the Python script. 
+
+\begin{enumerate}
+\item \textit{role\_arn} - The AWS IAM Role  which authorizes Crayon to start training jobs on SageMaker.
+\item \textit{bucket} - The AWS S3 bucket where any artifacts of the training job should be stored.
+\item \textit{session} - A \textit{boto3.Session} object which Crayon will use to interact with SageMaker. 
+\end{enumerate}
+
+ The IAM Role requires permissions to start training jobs on sagemaker, pull AWS ECR images, and read/write access to the provided S3 bucket. For information about how to create a IAM Role with the proper permissions as well as an S3 bucket please refer to the AWS documentation for these two services. Boto3 is a python package which makes it easy to interact with AWS services from Python code, please also refer to the boto3 documentation for further information.
+
+In Listing \ref{config:cloud_training}, an example configuration file is displayed which can be used to train on AWS SageMaker. In \ref{code:cloud_training} an example python file is presented which given a config dispatches training jobs to SageMaker using the \textit{run\_config} function of Crayon.
+
+\begin{lstlisting}[label={config:cloud_training}, caption=Config file for running training jobs on SageMaker.]
+my_algo:
+  image: 012345678901.dkr.ecr.eu-west-1.amazonaws.com/gluonts:2020-11-01
+  hyperparameters:
+    freq: H
+    prediction_length: 24
+    forecaster_name: gluonts.model.deepar.DeepAREstimator 
+  instance: ml.m5.xlarge 
+  metrics:
+    abs_error: 'abs_error\): (\d+\.\d+)'
+
+my_dataset:
+  path:
+    train: s3://gluonts-run-tool/gluon_ts_datasets/constant/train/data.json
+    test: s3://gluonts-run-tool/gluon_ts_datasets/constant/test/data.json
+
+\end{lstlisting}
+\begin{lstlisting}[language=Python, label={code:cloud_training}, caption=Code for running training jobs on AWS SageMaker using Crayon]
+from crayon import run_config
+import boto3
+
+jobs = run_config(
+    config="config.yml",
+    combination="config.my_algo * config.my_dataset",
+    role_arn="arn:aws:iam::012345678901:role/service-role/my_role",
+    bucket="my_bucket",
+    session=boto3.Session(),
+)
+\end{lstlisting}
+
+\section{Tuning}
+In order to be able to use Crayon as a benchmarking tool, it is advised that each algorithm has been suitably tuned to the datasets which it should run on. This is required since comparing a finely tuned model with an undertuned model will result in unfair comparisons being made. As discussed in \ref{subsec:equal_tuning} it is not easy to ensure that different models receive a fair tuning effort without introducing biases towards certain properties of the algorithms.
+
+Grid search is a common strategy used when tuning algorithm. When tuning using grid search, one creates for each hyperparameter a list of values which that hyperparameter can take. Thereafter the algorithm is then run for each combination of these parameters and the hyperparameter combination which yielded the best results is then returned as the optimal hyperparameter combination to use.
+
+Below I present how an algorithm can be tuned using the grid-search functionality in Crayon.
+
+\subsection{Grid-Search}
+Crayon offer grid search functionality through the \textit{grid\_search} function in the \textit{Crayon.Tuner} module. 
+An overview of the features of the \textit{grid\_search} module is displayed below:
+
+\begin{itemize}
+\item Performs grid search with static and changing parameters
+\item Each hyperparameter combination can be rerun multiple times to handle non-deterministic algorithms
+\item Allows passing a custom aggregation function in order to customize how multiple runs of a combination should be merged. (i.e. should the average be taken, should the mode be taken or the minimum?)
+\item Allows passing of a custom scoring function for handling different optimizations. (i.e. for MASE a lower error is better while for some other metric this may not hold true.)
+\item Generates runtool configuration files for each combination of hyperparameters.
+\end{itemize}
+
+In \ref{code:grid_search_signature} the signature for the \textit{grid\_search} method of Crayon is displayed. Each of the parameters of this method will here be presented and in \ref{code:grid_search_local} an example of how performing grid search locally is presented. In \ref{code:grid_search_cloud} an example of how one could execute the grid search using SageMaker is shown.
+\\
+\\
+\textbf{Grid Search function overview}
+\\
+\begin{lstlisting}[language=Python, label={code:grid_search_signature}, caption=Parameters of the grid search functionality in Crayon.]
+def grid_search(
+    changing_hyperparameters: dict,
+    target_metric: str,
+    dataset: Dataset,
+    algorithm: Algorithm,
+    output_dir: str = crayon_dir().resolve(),
+    aggregation_function: Callable = statistics.mean,
+    evaluation_function: Callable = lambda new, old: new < old,
+    run_locally: bool = True,
+    **kwargs,
+) -> GridSearchResults:
+\end{lstlisting}
+
+\textit{changing\_hyperparameters} are the hyperparameters which are to be tuned. This parameter takes a dictionary where the keys are the hyperparameters to tune and the value is a list of values which the hyperparameter should take. The \textit{target\_metric} parameter selects which metric that the algorithm outputs should be optimized for. Further, the grid search takes a \textit{crayon.Dataset} and a \textit{crayon.Algorithm} (see \ref{crayon:algorithms} \& \ref{crayon:datasets}). Any hyperparameters defined for the algorithm stays the same for each run in the training loop. All configuration which are run will generate a configuration file usable with Crayon for subsequent runs. The \textit{output\_dir} determines where these files will be stored. 
+
+The \textit{aggregation\_function} will be used to merge the results if each configuration should be run more than once. For example, if you wish to tune an algorithm and you wish to run it \textit{N} times. The \textit{aggregation\_function} converts these \textit{N} recorded metrics into a single value. The default way that this is done is through simply taking the mean of the recorded values. Through passing a custom function to the \textit{aggregation\_function} parameter one can override this behaviour. This function needs to take a list of numbers as a parameters and it needs to return a single value.
+
+The \textit{evaluation\_function} is used to determine whether the results of a specific combination performed better than the best run so far. The default behaviour defines that if the new value of the target metric is lower than the best so far, it is better. This makes sense whenever one wishes to minimize the target metric, i.e. an absolute error of 10 is better then an absolute error of 100. However for other target metrics, different behaviour may be more suitable. by providing a function which takes two parameters, the new value and the old value and compares these as a the \textit{evaluation\_function} parameter one can alter this behaviour. The \textit{run\_locally} parameter determines if the jobs should be executed on the local machine or on AWS SageMaker.
+Any additional parameters will be passed to the \textit{crayon.run\_config} function upon starting the training jobs. 
+\\
+\\
+\textbf{Grid search examples}
+\\
+In the example presented in \ref{code:grid_search_local} we perform grid search on an image containing gluonts. The algorithm being tuned in GluonTS is the DeepAREstimator with the hyperparameters \textit{freq} and \textit{prediction\_length} being the same for each training job. The DeepAREstimator should be optimized by minimizing the average value of the abs\_error metric over two runs for each combination. The hyperparameters that generate the grid to search over are the \textit{epochs} and the \textit{context\_length}.
+
+\begin{lstlisting}[language=Python, label={code:grid_search_local}, caption=Grid search running locally.]
+grid_search(
+        algorithm=Algorithm(
+            name="deepar",
+            image="gluonts_cpu",
+            hyperparameters={
+                "freq": "D",
+                "prediction_length": 7,
+                "forecaster_name": "gluonts.model.deepar.DeepAREstimator",
+            },
+        ),
+        dataset=Dataset(
+            name="electricity",
+            path={
+                "train": "file:///datasets/electricity/train/data.json",
+                "test": "file:///datasets/electricity/test/data.json",
+            },
+        ),
+        runs=2,
+        target_metric="abs_error",
+        aggregation_function = statistics.mean, 
+    	evaluation_function = lambda new, old: new < old,
+        changing_hyperparameters={
+        	"epochs": [1, 5],
+        	"context_length": [1, 5],
+    	}
+    )
+\end{lstlisting}
+
+By setting the \textit{run\_locally} parameter to False we tell Crayon to execute the training on SageMaker instead of locally. In order to make this work, we need to provide the an AWS S3 bucket, an AWS IAM role and a boto3 Session object. See section \ref{sagemaker_requirements} for more information about these.
+An example of how grid search can be executed on SageMaker is presented in \ref{code:grid_search_cloud}.
+
+\begin{lstlisting}[language=Python, label={code:grid_search_cloud}, caption=Grid search running on SageMaker.]
+from crayon import GLUONTS_METRICS, Algorithm, Dataset, grid_search
+import boto3
+
+grid_search(
+        role_arn="arn:aws:iam::012345678901:role/service-role/my_role",
+        bucket="my_bucket",
+        run_locally=False,
+        session=boto3.Session(),
+        algorithm=Algorithm(
+            name="deepar",
+            image="012345678901.dkr.ecr.eu-west-1.amazonaws.com/gluonts/cpu",
+            hyperparameters={
+                "freq": "D",
+                "prediction_length": 7,
+                "forecaster_name": "gluonts.model.deepar.DeepAREstimator",
+            },
+            metrics=GLUONTS_METRICS,
+            instance="ml.m5.xlarge",
+        ),
+        dataset=Dataset(
+            name="electricity",
+            path={
+                "train": "s3://gluon_ts_datasets/electricity/train/data.json",
+                "test": "s3://gluon_ts_datasets/electricity/test/data.json",
+            },
+        ),
+        runs=2,
+        target_metric="abs_error",
+        aggregation_function = statistics.mean, 
+        evaluation_function = lambda new, old: new < old,
+        changing_hyperparameters={
+        	"epochs": [1, 5],
+        	"context_length": [1, 5],
+    	}
+    )
+\end{lstlisting}
+\section{Benchmarking}
+\label{subsec:benchmarking}
+One of the key components of Crayon is the benchmarking module. This module allows algorithms to be benchmarked on a couple of datasets. (TODO write which datasets it is being run on.) 
+One can use crayon to benchmark an algorithm by providing a config file containing the algorithm. Furthermore, one must pass which target metric should be the target for the benchmark, i.e. absolute error, MASE or anything else which the algorithm outputs. Crayon will then run the algorithm on each dataset 20 times in order to build up a distribution of the target metric. Thereafter, a score is calculated summarizing the distribution of errors into a single value. This is done in order to rank the algorithm against any other benchmarked algorithms. The score is calculated as follows TODO Decide how to calculate the score. Probably using the mode will work best.
+
+As the benchmark should run on several different datasets, it is important to provide tuned models for each of these datasets. One can do so by naming the algorithms in the config file using the structure:\textit{ <algorithm\_name>\_<dataset\_name>}. In \ref{config:benchmarking} an example config which can be used for benchmarking is presented. Note that there are two  hyperparameter configurations of DeepAR in the config, this indicates that different hyperparameters will be used for different datasets. 
+
+\begin{lstlisting}[language=Python, label={config:benchmarking}, caption=Config file for benchmarking using Crayon. Note that \textit{deepar\_electricity} has a different hyperparameter configuration thus these hyperparameters will be used when benchmarking the algorithm on the electricity dataset.]
+deepar:
+    name: deepar
+    image: gluonts:cpu_new
+    hyperparameters:
+        epochs: 1
+        freq:
+            $eval: $trial.dataset.meta.freq
+        prediction_length:
+            $eval: 2 * $trial.dataset.meta.prediction_length
+        context_length:
+            $eval: 2 * $trial.algorithm.hyperparameters.prediction_length
+        forecaster_name: gluonts.model.deepar.DeepAREstimator    
+    instance: local
+
+deepar_electricity:
+    $from: deepar
+    hyperparameters:
+        epochs: 2
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, label={code:benchmarking}, caption=Python script for starting a benchmarking run using Crayon.]
+from crayon import benchmark
+
+benchmark(
+    algorithm_config="config.yml",
+    algorithm_name="deepar",
+    target_metric="MASE",
+)
+\end{lstlisting}
+
+After all the training jobs has finished the recorded metrics of the run is stored to a file on the local machine. This file also contains the \textit{id} of the benchmark, as well as the config used to create the training jobs, and the \textit{Jobs} object which was generated from the benchmark. Essentially everything one would need in order to rerun the exact experiment as well as the recorded results is stored in this file. In the future, this should arguably be handled by some centralized storage server instead however this is out of the scope of the thesis. 
+
+A benefit of this file is that it can be used to verify that an algorithm behaves the same further down the line i.e., it can be used to detect if the behaviour of an algorithm is the same or if it changed since the benchmark was run. How this can be done using Crayon will be discussed in section \ref{subsec:verifying_results}. 
+
+\section{Verifying results}
+\label{subsec:verifying_results}
+In \ref{"sec:reproducibility"} I delved into how one can statistically detect whether two distributions of values behave the same, i.e. if they are sampled from the same underlying distributions. Crayons verification module is designed based on the results and definitions made in that chapter. Lets walk through the use of the verification module using an example:
+
+User A has created a machine learning algorithm and documents the performance of the algorithm in a paper. In the paper, User A also provides the link to a git repository containing the algorithm. Some time later, user B tries to reproduce the findings of user A. However, user B is unable to achieve the same accuracy as was reported in the paper of user A even though the same code was executed. Now the question is, was the accuracy recorded in the paper false or, was it a lucky run of the algorithm? Perhaps user A continued working on the algorithm since the paper was presented, and introduced some changes which caused the accuracy of the algorithm to change? Or maybe the hyperparameters used by User B are not the same as those used by user A?
+
+Traditionally it would be hard to verify the results of user A in this scenario. Theoretically, if user A would have run the algorithm several times in order to build up a distribution of error metrics which he then would have shared. User B could have compared the distributions that she observed with those that User A shared. However, sharing the raw data for several runs of algorithms is rarely done in practice and even less so in a machine readable format. 
+
+The benchmarking module of Crayon generates these distributions and includes tooling for sharing and verifying them. Any benchmarks made using Crayon will have their results stored into a \textit{results.yml} file on the local machine. Crayon can use the data in this file in order to verify that two different benchmarks are sampled from the same distribution. Given a \textit{results.yml} file, Crayon can also rerun the benchmark with the exact same hyperparameter configuration. Since this \textit{results.yml} file can be shared and compared across several installations of Crayon it can easily be added as an artifact to a git repository. Let us now show how the two users in the above example could have used Crayon to make the results of User A reproducible. 
+
+Assuming that user A would have provided her local \textit{results.yml} file as part of the git repository. User B could then run a local benchmark using Crayon to generate a local \textit{results.yml} file. Thereafter user B could use Crayon to verify that the new benchmarks behave the same as what was reported in the source paper. Thus, even though user B is unable to reproduce the exact same values as user A, user B is able to show that the distribution reported by user A is still the same and thus that algorithm behaves the same. Note that User B does not need to know anything about which hyperparameters was used for the benchmark as these are stored in the \textit{results.yml} file which was shared by User A. 
+
+In \ref{code:verify} example code for verifying if two benchmarks are of the same algorithm is presented. As noted in the section presenting the benchmarking functionality each benchmark was given an \textit{id} which is unique within a \textit{results.yml} file. This \textit{id} is used to select which benchmarks should be compared within one \textit{results.yml} file. 
+
+If one wishes to compare different \textit{results.yml} files, the paths to the two \textit{result.yml} files can be passed to the \textit{verify\_benchmarks} function along with the banchmark \textit{id} that should be compared in each file. If only local benchmarks are to be compared, the paths to the \textit{result.yml} files can be omitted.
+
+\begin{lstlisting}[language=Python, label={code:verify}, caption=Python code to verify whether two benchmarks are of the same algorithm.]
+from crayon import verify_benchmarks
+
+verify_benchmarks(
+    id_1="2021/01/25/22-09-04",
+    id_1_results_file="result_1.yml", 
+    id_2="2021/01/25/19-50-43",
+    id_2_results_file="result_2.yml",
+    target_metric="MASE",
+)
+\end{lstlisting}
+
+Internally Crayon would load the two \textit{results.yml} files, extract the results of the benchmarks and then perform the Kolmogorov-Smirnov test in order to compare the two distributions. If the p-value reported by the Kolmogorov-Smirnov test would be less than \textit{0.05}, the test fails and thus the two samples are with a 95\% confidence not sampled from the same distribution. 
+
+Note that we cannot detect if the algorithm used is the exact same one but only if the behaviour of the two algorithms is the same.
+
+\section{Examples}
+\subsection{Generating Gluon-TS artifacts}
+Generating docker images containing GluonTS algorithms can easily be done by running docker build on suitable docker files in the GluonTS repository. After an image is built one can access the different 
+\subsection{Catching regressions of algorithms in gluon-ts}
+\subsection{Running benchmarks of three different algorithms}
+% ---------------------------------------------------------------------------
+%: ----------------------- end of thesis sub-document ------------------------
+% ---------------------------------------------------------------------------
+
+
+% ---------------------------------------------------------------------------
+%: ----------------------- end of thesis sub-document ------------------------
+% ---------------------------------------------------------------------------
+
