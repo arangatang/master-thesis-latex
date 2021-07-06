@@ -1,0 +1,71 @@
+%\chapter{Implementation \label{sec:metadatatypes}}
+
+
+\section{Overview}
+\begin{itemize}
+\item 
+\end{itemize}
+
+
+\section{Ensuring reproducible results}
+\label{"sec:reproducibility"}
+The ability to reproduce findings is a core tenet of the scientific method. Deep learning often has some randomness associated to it which makes reproducing results more difficult. In \ref{subsec:defining_reproducibility} we define reproducibility for deep learning. Section \ref{subsec:distributions} dives deeper into how distributions of error metrics can be used to ensure reproducibility of experiments.
+
+\subsection{Defining reproducibility}
+\label{subsec:defining_reproducibility}
+As discussed in \ref{subsec:reproducibility} deep learning models often suffer from random fluctuations in their accuracy due to inherent random processes of their architectures. This makes it hard to accurately and reproducibly compare the accuracy of different algorithms. 
+
+A common approach to solve this randomness is to fix the random seed prior to training the algorithm. While this does ensure that a specific configuration of the model is reproducible it does not necessarily ensure that the behaviour of an algorithm in general is reproducible.
+
+By not fixing the seed we will instead receive a distribution of errors for a given hyperparameter configuration. This distribution provides insights into what range of accuracies one could expect for a specific algorithm running on a specific dataset. I.e. is it heavy tailed, is it wide, does it follow a normal distribution etc. By instead comparing distributions of algorithm errors we can more generally verify if two algorithms perform the same. Thus by our definitions, if two algorithms perform the same they are, logically equivalent in performance. 
+
+It is somewhat common that code needed for running algorithms are provided by by their authors. However, it is unfortunately not always the case that the code is frozen at the time of publication. I.e. additional changes may have been added to the algorithm since its publication. This complicates matters as different implementations of the same algorithm may behave differently (gluonts bug on deepar). Furthermore, different implementations of the same algorithm may have different parameters exposed/different internal architecture thus possibly resulting in different results on the same workload (SageMaker DeepAR vs GluonT DeepAR). 
+
+Due to this I believe that persistent artifacts such as Docker images containing algorithms are needed for true reproducibility. In \ref{subsec:runtool} I present a purpose built tool which through a domain specific language allows defining experiments on algorithms in Docker images. By sharing the docker image, a configuration file, the dataset and a small python script reproducible runs of an algorithm can be made. 
+
+To summarize, in this thesis, reproducibility is defined as being able to verify whether two independent sets of training jobs are sampled from the same distribution. Furthermore, for strong reproducibility I propose that algorithm artifacts such as Docker images are used in conjunction with a reproducible way of running them.
+
+\subsection{A look on distributions}
+\label{subsec:distributions}
+Suppose that I would publish a report detailing that on error metric X on dataset D it receives a value of E. This approach is analogous to saying that "this method with these specific parameters outputs this value". By limiting the representation of the algorithm to this extent one is unable to capture additional characteristics of the algorithm such as how consistent its errors are. 
+
+Some randomness cannot be controlled by setting the seed such as OS related scheduling of threads. This can effect the performance of ML models using multi-threading for fast calculations (SEE SECTION XYZ FOR MORE). If this kind of error occurs, it may be hard to reproduce results. 
+
+TODO look through the paragraphs below and bind them together better. 
+
+Running an algorithm on a dataset N  times would result in a set of N error metrics being produced. These errors would be samples taken from a distribution of the errors this specific algorithm would have on this specific dataset. One could imagine that an algorithm which generally performs well on this dataset would have an error distribution with a peak close to the metrics optimum value (i.e. 0 for MASE, MAPE, AE etc.). Furthermore, algorithms with a higher variance in their results, should logically result in a wider distribution. 
+
+In the following sections I will discuss possible approaches to solve the following questions:
+
+\begin{enumerate}
+    \item How can one verify that two sets of error metrics; N and M are sampled using the same forecasting algorithm on a specific dataset.
+    \item How accurate is the method in terms of false positives.
+    \item What sample size does it need to work sufficiently well. TODO define sufficiently well...
+    \item How does it perform empirically 
+\end{enumerate}
+
+\section{Enabling fair and accurate comparisons}
+\label{sec:fair_and_accurate_comparisons}
+\subsection{Equal tuning effort}
+\label{subsec:equal_tuning}
+When machine learning algorithms are employed in real life these algorithms are tuned thoroughly on the data it should predict on. 
+
+In order to allow for fair comparisons between models, it is required that the algorithms has been tuned on the dataset in question. Performing tuning in a fair way is hard as there are many strategies one could employ to ensure a fair tuning effort. However none of these strategies are flawless and thus, some algorithms may be better tuned using one strategy than another. 
+
+One strategy which could be employed to ensure fair tuning could be to fix the total training time available for tuning. This would be fair in the sense that each algorithm would have the same time to find good hyperparameters. However this would give an unfair advantage to fast algorithms. Further, even the programming language used to develop a system could bias these results. I.e. the programming language C generally executes faster than for example Python.
+
+Another strategy could be to set a fixed amount of parameter combinations to test. This ensures that the search space of the parameters are equally traversed for different algorithms. However it is not fair in the sense that the search space of some algorithms hyperparameter configurations are larger than others. Thus an algorithm with two hyperparameters would be more comprehensively tuned than an algorithm with hundreds of parameters.
+
+\subsubsection{User tuned}
+\subsubsection{Automated tuning}
+
+\subsection{Metrics}
+
+\section{Designing a benchmarking system for forecasting methods}
+
+\subsection{Choosing datasets}
+\subsection{Handling reproducibility}
+\subsubsection{Naive approach}
+Random noise follows a normal distribution if enough samples are taken. Thus if the noise added to the errors is purely random noise, it follows that the distributions of the error metrics should be normally distributed. TODO verify/come with examples
+
+If this is the case, then one should be able to detect if N is sampled from the same distribution as M by comparing the mean of N with the mean of M +- some standard deviations of M. This approach has the benefit of being simple and intuitive.

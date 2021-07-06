@@ -1,0 +1,222 @@
+
+\documentclass[a4paper, 12pt, oneside, BCOR1cm,toc=chapterentrywithdots,hidelinks]{scrbook}
+
+\usepackage[a4paper]{geometry}
+\usepackage{textcomp}
+\usepackage{longtable}
+%\usepackage{tabu}
+
+\usepackage[ngerman, english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx} 
+\usepackage{acronym}
+\usepackage{url}           	 
+\usepackage{hyperref} 	 
+\usepackage{listings, color}	% for source code
+\usepackage{scrlayer-scrpage}	% header and footer line
+\usepackage{acronym}
+\usepackage[ruled,vlined,algochapter]{algorithm2e}
+\usepackage{tocbibind}
+\usepackage{blindtext}
+
+\usepackage{chngcntr}
+\counterwithout{figure}{chapter}
+\counterwithout{table}{chapter}
+\counterwithout{algocf}{chapter} 
+%\counterwithout{lstlisting}{chapter}
+\AtBeginDocument{% the counter is defined later
+  \counterwithout{lstlisting}{chapter}%
+}
+\renewcommand\lstlistingname{Code Fragment}
+
+%for adding comments
+\usepackage{verbatim}
+
+% for tables
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{xcolor}
+
+% header and footer line - no header & footer line on pages where a new chapter starts
+\pagestyle{scrheadings}
+% TU Berlin logo at header
+\chead{\includegraphics[width=1.2cm]{./img/TU-Berlin-Logo.pdf} 
+}
+
+
+\usepackage{xcolor}
+\usepackage{comment}
+% \definecolor{codegreen}{rgb}{0,0.6,0}
+% \definecolor{codegray}{rgb}{0.5,0.5,0.5}
+% \definecolor{codepurple}{rgb}{0.58,0,0.82}
+% \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% \lstdefinestyle{mystyle}{
+%     backgroundcolor=\color{backcolour},   
+%     commentstyle=\color{codegreen},
+%     keywordstyle=\color{magenta},
+%     numberstyle=\tiny\color{codegray},
+%     stringstyle=\color{codepurple},
+%     basicstyle=\ttfamily\footnotesize,
+%     breakatwhitespace=false,         
+%     breaklines=true,                 
+%     captionpos=b,                    
+%     keepspaces=true,                 
+%     numbers=left,                    
+%     numbersep=5pt,                  
+%     showspaces=false,                
+%     showstringspaces=false,
+%     showtabs=false,                  
+%     tabsize=2
+% }
+
+% \lstdefinelanguage{YML}{
+%   keywords={true,false,null,y,n},
+%   keywordstyle=\color{darkgray}\bfseries,
+%   ndkeywords={},
+%   ndkeywordstyle=\color{black}\bfseries,
+%   identifierstyle=\color{black},
+%   sensitive=false,
+%   %moredelim=[l]{}{:},
+%   comment=[l]{##},
+%   morecomment=[s]{/*}{*/},
+%   commentstyle=\color{purple}\ttfamily,
+%   stringstyle=\color{blue}\ttfamily,
+%   %morestring=[l]{-}{},
+%   morestring=[b]',
+%   morestring=[b]"
+% }
+
+% \lstset{style=mystyle}
+% \newcommand\YAMLcolonstyle{\color{red}\mdseries}
+% \newcommand\YAMLkeystyle{\color{black}\bfseries}
+% \newcommand\YAMLvaluestyle{\color{blue}\mdseries}
+
+% \makeatletter
+
+% % here is a macro expanding to the name of the language
+% % (handy if you decide to change it further down the road)
+% \newcommand\language@yaml{yaml}
+
+% \expandafter\expandafter\expandafter\lstdefinelanguage
+% \expandafter{\language@yaml}
+% {
+%   keywords={true,false,null,y,n},
+%   keywordstyle=\color{darkgray}\bfseries,
+%   basicstyle=\YAMLkeystyle,                                 % assuming a key comes first
+%   sensitive=false,
+%   comment=[l]{\#},
+%   morecomment=[s]{/*}{*/},
+%   commentstyle=\color{purple}\ttfamily,
+%   stringstyle=\YAMLvaluestyle\ttfamily,
+%   moredelim=[l][\color{orange}]{\&},
+%   moredelim=[l][\color{magenta}]{*},
+%   moredelim=**[il][\YAMLcolonstyle{:}\YAMLvaluestyle]{:},   % switch to value style at :
+%   morestring=[b]',
+%   morestring=[b]",
+%   literate =    {---}{{\ProcessThreeDashes}}3
+%                 {>}{{\textcolor{red}\textgreater}}1     
+%                 {|}{{\textcolor{red}\textbar}}1 
+%                 {\ -\ }{{\mdseries\ -\ }}3,
+% }
+
+% % switch to key style at EOL
+% \lst@AddToHook{EveryLine}{\ifx\lst@language\language@yaml\YAMLkeystyle\fi}
+% \makeatother
+
+% \newcommand\ProcessThreeDashes{\llap{\color{cyan}\mdseries-{-}-}}
+\usepackage{tabularx}
+\begin{document}
+
+\frontmatter
+%Titlepage
+\include{./misc/Titlepage}
+\thispagestyle{empty}
+\cleardoublepage
+
+%Self-assertion
+\include{./misc/Self-assertion}
+\thispagestyle{empty}
+\cleardoublepage
+
+% Abstract in Deutsch
+\addchap*{Zusammenfassung}
+\input{misc/Abstract_deutsch}
+
+% Abstract
+\addchap*{Abstract}
+\input{misc/Abstract}
+
+% Acknowledgments  
+\addchap*{Acknowledgments}
+\input{misc/Acknowledgment}
+
+%table of contents
+\addtocontents{toc}{\protect\setcounter{tocdepth}{-1}}
+\tableofcontents
+\addtocontents{toc}{\protect\setcounter{tocdepth}{3}}
+
+%footnote
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+%\blfootnote{Chapters 3-5 are the core of the thesis, whereas Chapters 1, 2, 6, and 7 provide context. The major contributions should be in Chapters 4 and 5. This structure serves as a guideline and should be customized accordingly. In particular, the generic chapter titles should be replaced with more specific ones, where appropriate (e.g., Chapter 4).} 
+
+%list of figures
+\listoffigures
+
+%list of tables
+\listoftables
+
+
+
+% List of Abbreviations
+\onecolumn
+\addchap{List of Abbreviations}
+\begin{acronym}[Bash]
+  \acro{NN}{Neural Network}
+  \acro{DNN}{Deep Neural Network}
+  \acro{RNN}{Recurrent Neural Network}
+
+\end{acronym}
+\onecolumn
+
+
+%algorithms
+\listofalgorithms
+\addcontentsline{toc}{chapter}{List of Algorithms}
+
+%In case, code fragments have to be added
+%\renewcommand{\lstlistlistingname}{List of Code Fragments}
+%\lstlistoflistings
+%\addcontentsline{toc}{chapter}{List of Code Fragments}
+
+\mainmatter % comment single chapters for faster compilation
+
+\input{./chapters/1Introduction}
+\input{./chapters/2Background}
+% \input{./chapters/3Approach}
+% \input{./chapters/4Designing}
+% \input{./chapters/5Crayon}
+% \input{./chapters/6Empirical}
+% \input{./chapters/7Evaluation}
+% \input{./chapters/8Discussion}
+% \input{./chapters/9Conclusion}
+
+% ---------------------------------------------------------------
+
+%Bibliography 
+\begingroup
+\raggedright
+\bibliographystyle{splncs03}
+%\bibliographystyle{acm}
+\bibliography{bibliography}
+\endgroup
+
+%appendix
+\input{./misc/Annex}
+
+\end{document}

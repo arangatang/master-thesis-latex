@@ -1,0 +1,111 @@
+\chapter{Introduction\label{cha:chapter1}}
+Time series forecasting, the ability to predict future trends from past data, is an important tool in science, for businesses and governments. However, it can be a double edged sword if the predictions are incorrect. Predicting the future is hard and predictions are only as good as the data and learning capabilities of the forecasting model used. Recently the Covid-19 pandemic had disastrous effects on society. Time series forecasting was used to predict the spread of the virus so that governments, hospitals and companies could plan accordingly to minimize its effects. However, many of the forecasts were overestimating the spread of the virus which lead to both organizational and health issues for hospitals, personnel and patients. With better forecasting solutions which would be capable of generating probabilistic forecasts this issue could have been avoided \cite{IOANNIDIS2020}.
+
+Improving forecasting accuracy is an active area of research and for that, new forecasting methods are continuously proposed \cite{salinas_deepar_2019,rangapuram_deep_2018,oord_wavenet_2016,oreshkin_n-beats_2020,salinas_high-dimensional_2019}. As more forecasting methods are developed, these need to be compared in an accurate and reproducible way. The currently most popular method for comparing forecasting methods is through evaluating the algorithm on a couple of reference datasets \cite{hyndman_forecasting_3rd}. As a part of this process, the datasets often undergo some preprocessing before a model is trained on them. Similarly, the hyperparameters of the algorithm are often tuned to fit the dataset in question. These steps are considered good practice as it allows the algorithm to perform optimally. However, if the method used to process the dataset is unclear in any way or if configuration details such as which hyperparameters used are missing, reproducing results becomes hard \cite{makridakis_m4_2020}. 
+
+Some forecasting methods exhibit a non-deterministic behaviour where each subsequent run of the algorithm won’t necessarily produce the same output. This is especially the case for deep learning algorithms as they are heavily relying on random processes such as dropout or random initialization of weights \cite{srivastava_dropout_2014}. This makes it hard to reproduce results from these algorithms. Additionally, in the field of forecasting, multiple different metrics are employed in order to quantify the error of forecasts. This is due to some metrics being better suited for specific use cases. Often only a few of these metrics are used in papers when presenting new forecasting methods which makes reproducing results even harder.
+
+In other disciplines of machine learning benchmarking suites are common tools for performing automatic reproducible comparisons between different algorithms. Some examples of these are MLBench and MLPerf. In time series forecasting however, no such benchmarking suites exist instead results from competitions such as the M competitions  are held as the reference which future papers compare to. 
+
+Reproducible results imply that an algorithm needs to produce the same output no matter when someone wishes to reproduce them. It should not matter if it is shortly after the algorithm was presented or a long time thereafter. This introduces difficulties as some algorithms are continuously being improved upon by their makers. If any of these improvements would change the predictive power of the algorithm this would make it impossible to reproduce any results. These types of performance changes can be handled by automated tests which ensure that the accuracy of the algorithm remains. However, defining such tests is hard for non-deterministic output and therefore accuracy regressions can pass through undetected \cite{gluonts_deepar_github_issue}. Changes in predictive performance can also stem from third party updates of dependencies. These things are hard to control and potential problems are hard to foresee ahead of time. 
+
+
+
+\section{Motivation}
+Previous comparisons of forecasting algorithms have found subpar performance of machine learning based approaches both in terms of accuracy and resource consumption when compared to classical methods such as Arima, ETS and Theta. However these comparisons are often made unfairly as the deep learning models which were tested were rather simple neural networks with few bells and whistles. More advanced deep learning methods such as DeepAR, DeepState, WaveNet etc. have been developed since. Thus, there is a clear benefit of thoroughly evaluating these modern algorithms in a fair and accurate way. 
+
+Accurate and fair comparisons can however only be made if the algorithms being tested all have an equal opportunity to perform well. Ensuring equal opportunity allowing forecasting methods to perform optimally is however hard and implementing a strategy for doing this is required when doing large scale comparisons. Additionally, the choice of error metric to use when comparing forecasting models is important as each error metrics has their own benefits and drawbacks. Using a flawed error metric can invalidate a seemingly fair comparison as some metrics are unreliable for certain applications or datasets. Implementing a strategy for when to use and not use certain error metrics is required in order to allow for fair comparisons.
+
+Reproducibility of results is a core tenet of the scientific method. Despite this, being able to reproduce results from forecasting algorithms is not always straightforward \cite{makridakis_m4_2020}. Much of the difficulties regarding reproducibility stem from two core parts. Firstly, code and datasets are often not public and secondly the non-deterministic behaviour of certain forecasting models causes different runs of the models to produce different results. 
+
+This thesis will focus on how fair, accurate and reproducible comparisons of modern forecasting methods can be made. Particular focus will be put on how comparisons can be made in a reproducible way for non-deterministic forecasting models. As part of this thesis, a system is implemented which automates the tuning and benchmarking of forecasting models. This system is then used to perform a large scale comparison of several modern forecasting algorithms over multiple datasets.
+
+\section{Research Question}
+This thesis has as an overarching goal to compare modern forecasting models. This question is complex in itself and can be separated into three sub-questions:
+
+\begin{enumerate}
+\item \textit{Accuracy}: How to perform accurate comparisons between forecasting models?
+\item \textit{Fairness}: How can one fairly compare forecasting models?
+\item \textit{Reproducibility}: How to make comparisons reproducible? 
+\end{enumerate}
+
+\section{Contribution}
+\label{section:contribution}
+
+The main contribution of this thesis is Crayon, an open source library for benchmarking deep learning models in a fair, accurate and reproducible way. Many deep learning based forecasting algorithms are non-deterministic in nature which makes reproducing results hard. Crayon solves this by ensuring that the distribution of error metrics is reproducible. With distributions of error metrics, quantifying how good the accuracy of an algorithm is becomes a problem. To handle this, Crayon implements a custom scoring method, the "crayon score" for ranking forecasting models against eachother. 
+
+This thesis also investigates the efficiency of using various hypothesis tests such as the t-test and the Kolmogorov-Smirnov test to make non-deterministic output from forecasting models reproducible. Additionally, these tests are evaluated on forecasts generated by several modern forecasting solutions on several datasets. The practical benefits of applying hypothesis testing to verify distributions of forecasts is showcased on several modern forecasting algorithms trained on several real world datasets. Further, as a practical example this thesis shows how reproducibility by hypothesis testing can protect modern forecasting solutions from suffering accuracy regressions. 
+
+An additional contribution of this thesis is the analysis of 21 datasets with the purpose of identifying a representable subset to use when benchmarking forecasting methods.
+
+As the final contribution a large empirical comparison where the predictive performance of multiple modern forecasting algorithms is compared over four popular datasets.
+
+% ... should include the following:
+% \begin{itemize}
+% \item motivation (why is this problem interesting? offer examples),
+% \item research challenge (what is the obstacle to be overcome?),
+% \item novelty (was this problem already solved?),
+% \item anticipated impact (how does solving this problem impact our world?).
+% \end{itemize}
+
+%This chapter should include the following sections.
+
+%\section{Motivation\label{sec:moti}}
+%This section should 
+%\begin{itemize}
+ %   \item answer the question - why is this problem interesting? 
+ %   \item offer examples illustrating the problem.
+%\end{itemize}
+
+
+%\section{Research Challenge\label{sec:objective}}
+%This section should answer the question -
+%\begin{itemize}
+ %   \item what is the obstacle to be overcome?
+%\end{itemize}
+
+%\section{Novelty \label{sec:scope}}
+%This section should answer the question -
+%\begin{itemize}
+  %  \item was this problem already solved?
+%\end{itemize}
+
+%\section{Anticipated Impact \label{sec:outline}}
+%This section should answer the question -
+%\begin{itemize}
+ %   \item how does solving this problem impact our world?
+%\end{itemize}
+
+%Conclude this subsection with an image describing 'the big picture'. How does your solution fit into a larger environment? You may also add another image with the overall structure of your component.
+
+%'Figure \ref{fig:intro} shows Component X as part of ...' 
+%\\
+%\begin{figure}[htb]
+%  \centering
+%  \includegraphics[width=9cm]{intro_example.pdf}\\
+%  \caption{Component X}\label{fig:intro}
+%\end{figure}
+
+
+% The 'structure' or 'outline' section gives a brief introduction into the main chapters of your work. Write 2-5 lines about each chapter. Usually diploma thesis are separated into 6-8 main chapters. 
+% \\
+% \\
+% \noindent This example thesis is separated into 7 chapters.
+% \\
+% \\
+% \textbf{Chapter \ref{cha:chapter2}} is usually termed 'Related Work', 'State of the Art' or 'Fundamentals'. Here you will describe relevant technologies and standards related to your topic. What did other scientists propose regarding your topic? This chapter makes about 20-30 percent of the complete thesis.
+% \\
+% \\
+% \textbf{Chapter \ref{cha:chapter3}} analyzes the requirements for your component. This chapter will have 5-10 pages.
+% \\
+% \\
+% \textbf{Chapter \ref{cha:chapter4}} is usually termed 'Concept', 'Design' or 'Model'. Here you describe your approach, give a high-level description to the architectural structure and to the single components that your solution consists of. Use structured images and UML diagrams for explanation. This chapter will have a volume of 20-30 percent of your thesis.
+% \\
+% \\
+% \textbf{Chapter \ref{cha:chapter5}} describes the implementation part of your work. Don't explain every code detail but emphasize important aspects of your implementation. This chapter will have a volume of 15-20 percent of your thesis.
+% \\
+% \\
+% \textbf{Chapter \ref{cha:chapter6}} is usually termed 'Evaluation' or 'Validation'. How did you test it? In which environment? How does it scale? Measurements, tests, screenshots. This chapter will have a volume of 10-15 percent of your thesis.
+% \\
+% \\
+% \textbf{Chapter \ref{cha:chapter7}} summarizes the thesis, describes the problems that occurred and gives an outlook about future work. Should have about 4-6 pages.
