@@ -1,39 +1,20 @@
 \chapter{Scientific Background}
 \label{cha:chapter2}
-% ... should include the following:
-% \begin{itemize}
-%     \item definitions / technical terms,
-%     \item theoretical foundations / principles,
-%     \item descriptions of algorithms, hardware, software, and/or systems employed.
-% \end{itemize}
-
-
-
-% \begin{figure}[h]
-% \centering
-% \includegraphics[width=0.6\textwidth]{./img/strong_scaling.pdf}
-% \caption{Strong scaling for Visit Count\cite{GevayRBMQM21}.}
-% \end{figure}
-
-% We can leave this out... The advisor can point this out, if it is a concern.
-%Suggestion: Figures could be inserted in pdf form to avoid pixelation when the image is magnified.
-
-%This section is intended to give an introduction about relevant terms, technologies and standards in the field of X. You do not have to explain common technologies such as HTML or XML. 
 
 A time series is a set of data points with a clear ordering in time. Some examples are the exchange rate between two currencies over time or the electricity consumption of households, see figures \ref{fig:example_timeseries} and \ref{fig:example_timeseries_electricity} \cite{gluonts_paper}.
 
 \begin{figure}[htb]
-    \centering
-    \minipage{0.47\textwidth}
-    \includegraphics[width=\linewidth]{./img/exchange_rate_zoomed_2.png}
-    \caption{Exchange rate of two currencies from 1990 to 2013.}
-    \label{fig:example_timeseries}
-    \endminipage\hfill
-    \minipage{0.47\textwidth}
-    \includegraphics[width=\linewidth]{./img/electricity_zoomed_3.png}
-    \caption{Electricity consumed by households.}
-    \label{fig:example_timeseries_electricity}
-    \endminipage\hfill
+  \centering
+  \minipage{0.47\textwidth}
+  \includegraphics[width=\linewidth]{./img/exchange_rate_zoomed_2.png}
+  \caption{Exchange rate of two currencies from 1990 to 2013.}
+  \label{fig:example_timeseries}
+  \endminipage\hfill
+  \minipage{0.47\textwidth}
+  \includegraphics[width=\linewidth]{./img/electricity_zoomed_3.png}
+  \caption{Electricity consumed by households.}
+  \label{fig:example_timeseries_electricity}
+  \endminipage\hfill
 \end{figure}
 
 Timeseries which increase or decrease in value over a longer period of time is said to have a upwards or downwards \textit{trend}. If a timeseries has evenly distributed patterns such as the spikes in figure \ref{fig:example_timeseries_electricity} the timeseries is said have a seasonal component with a frequency equal to the distance between the spikes. For the electricity timeseries this would be 24 as household electricity consumption follow the daily rythm of everyday life i.e. use more energy during the morning and evening with 24 hour intervals. If the timeseries exhibit spikes without a clear frequency, these are knowns as \textit{cycles} \cite{bauer2021libra}. The data which cannot be described by these features is known as the \textit{remainder} \cite{hyndman_forecasting_3rd}. Not all timeseries exhibit all of these patterns, for example, the timeseries in figure \ref{fig:example_timeseries_electricity} does not display a trend.
@@ -57,17 +38,17 @@ Time series forecasting differs from common machine learning tasks such as image
 Forecasts often comes in one of two forms; probabilistic forecasts or point forecasts. A point forecast is a forecast which consist of only one estimation of future values. This estimation could be either a single point in time or a series of points for several different timesteps. In figure \ref{fig:example_timeseries_forecast_point} an example of a point forecast for several timesteps can be seen. Point forecasts has the disadvantage that they do not confer how accurate they are which may lead to prectitioners being overly confident in the forecasts. This has historically caused several issues and more recently with covid-19 where over relying on point forecasts led to overly drastic measures for governments and hospitals \cite{IOANNIDIS2020}. Probabilistic forecasts such as the one in figure \ref{fig:example_timeseries_forecast_probabilistic} includes this information by generating prediction intervals of the forecasts.
 
 \begin{figure}[htb]
-    \centering
-    \minipage{0.5\textwidth}
-    \includegraphics[width=\linewidth]{./img/exchange_rate_point_forcast.png}
-    \caption{Point forecast}
-    \label{fig:example_timeseries_forecast_point}
-    \endminipage\hfill
-    \minipage{0.5\textwidth}
-    \includegraphics[width=\linewidth]{./img/exchange_rate_prob_forcast.png}
-    \caption{Probability forecast}
-    \label{fig:example_timeseries_forecast_probabilistic}
-    \endminipage\hfill
+  \centering
+  \minipage{0.5\textwidth}
+  \includegraphics[width=\linewidth]{./img/exchange_rate_point_forcast.png}
+  \caption{Point forecast}
+  \label{fig:example_timeseries_forecast_point}
+  \endminipage\hfill
+  \minipage{0.5\textwidth}
+  \includegraphics[width=\linewidth]{./img/exchange_rate_prob_forcast.png}
+  \caption{Probability forecast}
+  \label{fig:example_timeseries_forecast_probabilistic}
+  \endminipage\hfill
 \end{figure}
 
 Many methods exist for generating forecasts on timeseries data, two common groups of these are machine learning based methods and trivial methods. A trivial forecasting method would be, for example, to predict that the next value should be the same as the last recently observed value or the average of the last N observations. For certain timeseries, trivial methods perform competitively and as such these are often held as a baseline to which new forecasting methods are being compared too. Some more complex methods include those based on regression analysis such as linear regression or autoregressive models such as ARIMA \cite{hyndman_forecasting_3rd}. Autoregressive models are a subset of regression models where the temporal ordering of the datapoints matter. I.e. autoregressive models use past observations to predict future values.
@@ -85,24 +66,24 @@ If a model generates forecasts it is important to be able to quantify how good o
 In other machine learning domains such as image recognition, the datasets used for training the models are disjoint from the test datasets. However, in the domain of time series forecasting this is not the case. Generally the train set contains the same time series as in the test set except for the last couple of data points for each time series. The number of removed data points is commonly the number of timesteps that a model should predict \cite{hyndman_forecasting_3rd}. In figure \ref{fig:train_test_split} a train test split is presented of a time series with six data points. In this example, a forecasting algorithm should predict one timesteps into the future, thus, the last datapoint would be removed and the train set would contain five data points while the test series would contain six.
 
 \begin{figure}[htb]
-    \centering
-    \minipage{1\textwidth}
-    \includegraphics[width=\linewidth]{./img/train_test_split.png}
-    \caption{An example train test split of a time series with six datapoints. The red circle is the datapoint which prediction will be compared to.}
-    \label{fig:train_test_split}
-    \endminipage\hfill
+  \centering
+  \minipage{1\textwidth}
+  \includegraphics[width=\linewidth]{./img/train_test_split.png}
+  \caption{An example train test split of a time series with six datapoints. The red circle is the datapoint which prediction will be compared to.}
+  \label{fig:train_test_split}
+  \endminipage\hfill
 \end{figure}
 
 
 A popular method of increasing the amount of test data is to make the test dataset contain multiple copies of each time series where each one is successively shorter. The train dataset would contain the shortest of the truncated time series truncated one additional time. This process is called K-fold cross validation but is also known as forecasting on a rolling origin or time series cross validation. Performing a 3-fold cross validation on a dataset containing one time series of length six timesteps would result in a dataset containing three time series. An example of this is shown in figure \ref{fig:k_fold_validation}. The advantage of the larger test dataset generated by this approach is that the performance of a model can be more accurately determined as it is excercised on more unseen data \cite{hyndman_forecasting_3rd}.
 
 \begin{figure}[htb]
-    \centering
-    \minipage{1\textwidth}
-    \includegraphics[width=\linewidth]{./img/k_fold_validation.png}
-    \caption{Example of a four fold cross validation dataset split. The red circles are the datapoints which predictions will be compaired to. Worth noting is that the train dataset here only has one timeseries of length two, i.e. one less than the shortest timeseries in the test dataset. This example assumes a prediction length for the dataset of one datapoint.}
-    \label{fig:k_fold_validation}
-    \endminipage\hfill
+  \centering
+  \minipage{1\textwidth}
+  \includegraphics[width=\linewidth]{./img/k_fold_validation.png}
+  \caption{Example of a four fold cross validation dataset split. The red circles are the datapoints which predictions will be compaired to. Worth noting is that the train dataset here only has one timeseries of length two, i.e. one less than the shortest timeseries in the test dataset. This example assumes a prediction length for the dataset of one datapoint.}
+  \label{fig:k_fold_validation}
+  \endminipage\hfill
 \end{figure}
 
 
@@ -110,35 +91,35 @@ A popular method of increasing the amount of test data is to make the test datas
 \label{subsec:error_metrics}
 When a forecasting model generates predictions on a timeseries, one needs to be able to quantify the error of the prediction from true observed values. In order to do this many different error metrics exists each with its own benefits and drawbacks. Often the choice of metric is dependent on data, and business application where the prediction will be used. In this section some of the error metrics which are commonly occurring in literature are presented. These metrics are calculated automatically when performing a backtest in GluonTS, see \ref{subsec:gluonts_overview} for details about this process. Note that only a subset of the metrics available in GluonTS is presented here to form a basis for subsequent chapters.
 
-For the remainder of this section a forecast is referred to as \(\hat{Y}\) and the expected values are referred to as \(Y\).
+Error metrics for forecasting can generally be split into three different categories: scale-dependent, scaled and percentage based \cite{hyndman_forecasting_3rd}. Within each of these categories multiple different metrics exists. The remainder of this section describes some common error metrics within each category along with pros and cons and how they are calculated. For the rest of the thesis, a forecast is referred to as \(\hat{Y}\) and the expected values are referred to as \(Y\).
 
 \subsubsection{Absolute Error}
-The absolute error is calculated as the distance between the predicted value and the ground truth. An absolute error is positive and a value of 0 is optimal. The absolute error is an intuitively simple error, thus it can easily be understood and discussed when comparing algorithms.
+The absolute error is calculated as the distance between the predicted value and the ground truth. An absolute error is positive and a value of 0 is optimal. It is an intuitively simple error, thus it can easily be understood and discussed when comparing algorithms.
 
 However intuitive the absolute error is, there is a a key issue with this error and that is that it is scale dependent. I.e. the greater the values of the dataset being predicted on, the larger the absolute error will be. This makes it impossible to compare the accuracy of an algorithm across different datasets unless they have the same scale. \cite{hyndman_forecasting_3rd} Furthermore, scale dependent metrics such as these may not be suitable even for comparing between timeseries within a single dataset. Imagine a dataset such as the electricity dataset (see table \ref{tab:datasets}) where each timeseries is the electricity consumption from a household. One household may contain many people and appliances while another may be a factory full of equipment with high power demands. These two timeseries would have two very different scales thus making it hard to compare the accuracy of the predictions.
 
 \begin{figure}[h]
-    \[Absolute Error = \sum|Y - \hat{Y}|\]
-    \caption{Equation for calculating the absolute error}
-    \label{eq:abs_error}
+  \[Absolute Error = \sum|Y - \hat{Y}|\]
+  \caption{Equation for calculating the absolute error}
+  \label{eq:abs_error}
 \end{figure}
 
 \subsubsection{Root Mean Squared Error - RMSE}
 The root mean squared error is another scale dependent error such as the absolute error. RMSE is calculated by taking the square root of the mean of the squared error. The RMSE thus punishes larger errors more than smaller errors. The RMSE is more complicated to interpret than for example the Absolute Error due to the non-linear nature, despite this, RMSE is widely used in practise \cite{hyndman_forecasting_3rd,gluonts-github}.
 
 \begin{figure}[h]
-    \[RMSE = \sqrt{mean((Y - \hat{Y})^2)}\]
-    \caption{Equation for calculating RMSE}
-    \label{eq:RMSE}
+  \[RMSE = \sqrt{mean((Y - \hat{Y})^2)}\]
+  \caption{Equation for calculating RMSE}
+  \label{eq:RMSE}
 \end{figure}
 
 \subsubsection{Mean Absolute Percentage Error - MAPE}
 Percentage based errors such as the Mean Average Percentage Error normalizes the errors between 0 and 1 thus MAPE can be compared across datasets with different scales. While this is beneficial, MAPE suffer from other issues. For example MAPE becomes infinite or undefined if the ground truth is 0 for any parts of the prediction. Further issues exists for example that it penalizes negative errors more than positive errors. These issues has lead to variations of MAPE to be created such as Symmetric MAPE \cite{hyndman_forecasting_3rd,gluonts-github}.
 
 \begin{figure}[h]
-    \[MAPE = mean(\frac{|Y - \hat{Y}|}{|Y|}))\]
-    \caption{Equation for calculating MAPE}
-    \label{eq:MAPE}
+  \[MAPE = mean(\frac{|Y - \hat{Y}|}{|Y|}))\]
+  \caption{Equation for calculating MAPE}
+  \label{eq:MAPE}
 \end{figure}
 
 \subsubsection{Mean Average Scaled Error - MASE}
@@ -149,9 +130,9 @@ In certain scenarios, for example if the reference model would result in a perfe
 In equation \ref{eq:MASE} the denominator is the error of a seasonal naive model. \(Y_t\) means the value at time \(t\) and \(Y_{t-m}\) means the value of the timeseries at the previous period, i.e. if the expected seasonality is 24h \(Y_{t-m}\) would become the value 24 timesteps previously.
 
 \begin{figure}[h]
-    \[MASE = \frac{mean(|Y - \hat{Y}|)}{mean(|Y_t - Y_{t-m}]|)}\]
-    \caption{Equation for calculating MASE}
-    \label{eq:MASE}
+  \[MASE = \frac{mean(|Y - \hat{Y}|)}{mean(|Y_t - Y_{t-m}]|)}\]
+  \caption{Equation for calculating MASE}
+  \label{eq:MASE}
 \end{figure}
 
 \section{Deep Learning forecasting methods}
@@ -161,10 +142,10 @@ Neural Networks (NN) have in recent years been successfully applied in many diff
 A simple neural network, similar in architecture to the network described in section \ref{algo:simplefeedforward} is presented in figure \ref{fig:simplefeedforward}.
 
 \begin{figure}[htb]
-    \centering
-    \includegraphics[width=0.5\linewidth]{./img/simplefeedforward.png}
-    \caption{A simple neural network for forecasting based on the SimpleFeedForwardEstimator in section \ref{algo:simplefeedforward}.}
-    \label{fig:simplefeedforward}
+  \centering
+  \includegraphics[width=0.5\linewidth]{./img/simplefeedforward.png}
+  \caption{A simple neural network for forecasting based on the SimpleFeedForwardEstimator in section \ref{algo:simplefeedforward}.}
+  \label{fig:simplefeedforward}
 \end{figure}
 \clearpage
 
@@ -197,26 +178,26 @@ Attempts has been made to create such a benchmark, one such example is \textit{L
 
 
 \begin{table}[h]
-    \begin{tabularx}{\textwidth}{|l|c|c|c|c|X|}
-        \hline
-        Name    & TS & Integration    & DS & Focus & Info                                                                    \\
-        \hline
-        \hline
-        Libra   & X  & R              & X  & A, S  & Diverse datasets for univariate local models                            \\
-        \hline
-        UCR     & X  & CSV            & X  & A     & Dataset repository with reference accuracies.                           \\
-        \hline
-        MLPerf  &    & Docker, CLI    &    & S     & Benchmarking for hardware and ML frameworks                             \\
-        \hline
-        PMLB    & X  & Python, R      & X  & -     & Dataset repository with 298 datasets for regression and classification. \\
-        \hline
-        MLBench &    & Kubernetes     &    & S     & For distributed ML frameworks                                           \\
-        \hline
-        DLBS    &    & Docker, Python &    & S     & Benchmarking for hardware and ML frameworks                             \\
-        \hline
-    \end{tabularx}
-    \caption{Overview of six benchmarking suites for ML, the column marked TS depicts whether they support time series forecasting and the DS column is whether they offer custom datasets. A is shorthand for  Accuracy and S for Speed.}
-    \label{tab:benchmarking_suites}
+  \begin{tabularx}{\textwidth}{|l|c|c|c|c|X|}
+    \hline
+    Name    & TS & Integration    & DS & Focus & Info                                                                    \\
+    \hline
+    \hline
+    Libra   & X  & R              & X  & A, S  & Diverse datasets for univariate local models                            \\
+    \hline
+    UCR     & X  & CSV            & X  & A     & Dataset repository with reference accuracies.                           \\
+    \hline
+    MLPerf  &    & Docker, CLI    &    & S     & Benchmarking for hardware and ML frameworks                             \\
+    \hline
+    PMLB    & X  & Python, R      & X  & -     & Dataset repository with 298 datasets for regression and classification. \\
+    \hline
+    MLBench &    & Kubernetes     &    & S     & For distributed ML frameworks                                           \\
+    \hline
+    DLBS    &    & Docker, Python &    & S     & Benchmarking for hardware and ML frameworks                             \\
+    \hline
+  \end{tabularx}
+  \caption{Overview of six benchmarking suites for ML, the column marked TS depicts whether they support time series forecasting and the DS column is whether they offer custom datasets. A is shorthand for  Accuracy and S for Speed.}
+  \label{tab:benchmarking_suites}
 \end{table}
 
 Instead of using benchmarking suites when comparing forecasting models, new forecasting solutions are instead pitted against each other in forecasting competitions. The Makridakis Competitions organized by Makridakis Spyros et.al. are the most well known of these and has at the time of writing undergone five iterations; the M1 in 1983 \cite{makridakis1987confidence}, M2 in 1982 \cite{makridakis1993m2}, M3 in 2000 \cite{m3_competition}, M4 in 2018 \cite{makridakis_m4_2020} and the M5 competition in 2020 \cite{m5}. These competitions have been highly impactful for the field of forecasting and has been the norm to which researchers compare too. However it was not until the M3 competition that NN based forecasters were included. These performed poorly compared to the non-NN algorithms which can partly be attributed to the limited size of the M3 dataset of 3003 timeseries \cite{m3_competition}. This shortcoming of the M3 dataset lead to the creation of the M4 competition which had a similar but much larger dataset containing 100 000 timeseries \cite{makridakis_m4_2020}. Despite this, the findings of the M4 competition was inline with that of the M3 competition in that approaches purely using NN performed worse than even simple models. However, the M4 competition winner was a hybrid approach which combined RNNs with classical models. The latest competition, the M5, was focused on retail sales forecasting and found for the first time that ML based solutions, primarily Gradient Boosting Trees but also NN approaches such as DeepAR outperformed classical statistical methods \cite{m5}.
@@ -228,6 +209,7 @@ It is unclear whether time series cross validation was used as well as how many 
 
 
 \subsection{Reproducibility}
+\label{sec:reproducibility}
 The ability to reproduce scientific results within the field of machine learning has been a hot topic in recent years with major conferences such as NeurIPS announcing dedicated reproducibility programs \cite{pineau2020improving}. Certain fields of ML research such as within healthcare is reportedly in a \textit{reproducibility crisis} \cite{beam2020challenges, mcdermott2019reproducibility}. Surveys conducted in 2018 reported that only 63\% of 255 ML publications could be reproduced and only 4\% of them could be reproduced without the original authors assistance \cite{pineau2020improving}. Another survey in Nature sent out to more than 1500 scientists from various diciplines in 2016 reported that 50\% researchers failed in reproducing even their own experiments \cite{baker20161}. Also Makridakis et.al., the organizers of the M-competitions, urged researchers to improve the reproducibility of their work. The following is a quote from their paper summarizing the M4 competition: \textit{"We believe that there is an urgent need for the results of important ML studies claiming superior forecasting performance to be replicated/reproduced, and therefore call for such studies to make their data and forecasting algorithms publically available, which is not currently the case"} \cite{makridakis_m4_2020}.
 
 There are multiple methods of defining reproducibility. Pineau et.al. defined reproducibility as being able as \textit{re-doing an experiment using the same data and same analytical tools} \cite{pineau2020improving}. This definition aligns with that of Beam et.al. however, they point out that reproducibility is not concerned with the validity of the claims of a paper, only that practical results can be recreated \cite{beam2020challenges}. McDermott et.al. further specifies the term reproducibility into three parts \textit{technical}, \textit{statistical} and \textit{conceptual}. For technical reproducibility, the code and datasets used should be made publically available and in order to be statistically reproducible, the variance of the results should be published. To be conceptually reprodicble, it was important that multiple datasets should be used for the comparisons \cite{mcdermott2019reproducibility}.
@@ -238,21 +220,21 @@ In addition to the requirement that code and datasets should be made available, 
 A summary of the requirements for achieving reproducibility is presented in table \ref{tab:reproducibility}.
 
 \begin{table}[h]
-    \centering
-    \begin{tabularx}{\textwidth}{|l|X|}
-        \hline
-        Type of reproducibility & Requirements                                                                                                                                                                               \\
-        \hline
-        \hline
-        Technical               & Code and datasets should be publically available. If random seed is set it should be reported. Specific versions of code should be detailed and assets such as Docker containers provided. \\
-        \hline
-        Statistical             & Variance of results should be published and statistical tests should be used.                                                                                                              \\
-        \hline
-        Conceptural             & Multiple complimentary datasets should be used for the comparison.                                                                                                                         \\
-        \hline
-    \end{tabularx}
-    \caption{Requirements for making ML workloads reproducible.}
-    \label{tab:reproducibility}
+  \centering
+  \begin{tabularx}{\textwidth}{|l|X|}
+    \hline
+    Type of reproducibility & Requirements                                                                                                                                                                               \\
+    \hline
+    \hline
+    Technical               & Code and datasets should be publically available. If random seed is set it should be reported. Specific versions of code should be detailed and assets such as Docker containers provided. \\
+    \hline
+    Statistical             & Variance of results should be published and statistical tests should be used.                                                                                                              \\
+    \hline
+    Conceptual              & Multiple complimentary datasets should be used for the comparison.                                                                                                                         \\
+    \hline
+  \end{tabularx}
+  \caption{Requirements for making ML workloads reproducible.}
+  \label{tab:reproducibility}
 \end{table}
 
 
@@ -334,45 +316,45 @@ The transformer is a Seq2Seq model which replaces the classical RNN encoder and 
 GluonTS offers 17 datasets ready to be used for training and evaluation, in table \ref{tab:datasets} an overview of these are presented. Of the available datasets 7 of them were first used in the M3, M4 and the M5 competitions \cite{makridakis_m4_2020,m3_competition,m5}. The remaining datasets has been used in multiple research papers with various amounts of preprocessing applied to them \cite{oreshkin_n_beats_2020,lai_modeling_2018,rangapuram_deep_2018,wen_multi-horizon_2018,wang_deep_2019,seq2seq}.
 
 \begin{table}[h]
-    \centering
-    \begin{tabular}{p{0.22\linewidth} | p{0.09\linewidth} | p{0.67\linewidth}}
-        Name               & Freq   & Description                                                                                                                                                                                                                                                       \\ \hline
-        Electricity        & Hourly & Hourly electricity consumption of 370 clients sampled between 2011 - 2014. The original dataset on UCL was sampled each 15 minutes whilst the dataset in GluonTS had the data resampled into hourly series \cite{gluonts-website, salinas_high-dimensional_2019}. \\
-        \hline
-        Exchange Rate      & B      & Daily currency exchange rates of eight countries; Australia, Britain, Canada, China, Japan, New Zealand, Singapore and Switzerland between 1990 and 2016  \cite{lai_modeling_2018}.                                                                               \\
-        \hline
-        Traffic            & H      & This dataset contains the hourly occupancy rate of 963 car lanes of the San Francisco Bay are freeways \cite{gluonts-github}.                                                                                                                                     \\
-        \hline
-        Solar Energy       & 10 Min & The solar power production records in the year of 2006, sampled every 10 minutes from 137 solar energy plants in Alabama \cite{lai_modeling_2018}.                                                                                                                \\
-        \hline
-        Electricity NIPS   & H      & The Electricity dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                          \\
-        \hline
-        Exchange Rate NIPS & B      & The Exchange Rate dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                        \\
-        \hline
-        Solar Energy NIPS  & H      & The Solar Energy dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                         \\
-        \hline
-        Traffic NIPS       & H      & The Traffic dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                              \\
-        \hline
-        Wiki Rolling NIPS  & D      & The Wiki dataset contains the amount of daily views for 2000 pages on Wikipedia \cite{salinas_high-dimensional_2019}.                                                                                                                                             \\
-        \hline
-        Taxi               & 30 Min & Number of taxi rides taken on 1214 locations in New York city every 30 minutes in the month of January 2015. The test set is sampled on January 2016 \cite{salinas_high-dimensional_2019}.                                                                        \\
-        \hline
-        M4 Hourly          & H      & Hourly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                               \\
-        \hline
-        M4 Daily           & D      & Daily timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                                \\
-        \hline
-        M4 Weekly          & W      & Weekly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                               \\
-        \hline
-        M4 Monthly         & M      & Monthly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                              \\
-        \hline
-        M4 Quarterly       & 3M     & Quarterly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                            \\
-        \hline
-        M4 Yearly          & Y      & Yearly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                               \\
-        \hline
-        M5 Dataset         & D      & Daily Walmart sales for 3049 products across 10 stores \cite{gluonts-github, m5}.
-    \end{tabular}
-    \caption{Datasets available in GluonTS.}
-    \label{tab:datasets}
+  \centering
+  \begin{tabular}{p{0.22\linewidth} | p{0.09\linewidth} | p{0.67\linewidth}}
+    Name               & Freq   & Description                                                                                                                                                                                                                                                       \\ \hline
+    Electricity        & Hourly & Hourly electricity consumption of 370 clients sampled between 2011 - 2014. The original dataset on UCL was sampled each 15 minutes whilst the dataset in GluonTS had the data resampled into hourly series \cite{gluonts-website, salinas_high-dimensional_2019}. \\
+    \hline
+    Exchange Rate      & B      & Daily currency exchange rates of eight countries; Australia, Britain, Canada, China, Japan, New Zealand, Singapore and Switzerland between 1990 and 2016  \cite{lai_modeling_2018}.                                                                               \\
+    \hline
+    Traffic            & H      & This dataset contains the hourly occupancy rate of 963 car lanes of the San Francisco Bay are freeways \cite{gluonts-github}.                                                                                                                                     \\
+    \hline
+    Solar Energy       & 10 Min & The solar power production records in the year of 2006, sampled every 10 minutes from 137 solar energy plants in Alabama \cite{lai_modeling_2018}.                                                                                                                \\
+    \hline
+    Electricity NIPS   & H      & The Electricity dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                          \\
+    \hline
+    Exchange Rate NIPS & B      & The Exchange Rate dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                        \\
+    \hline
+    Solar Energy NIPS  & H      & The Solar Energy dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                         \\
+    \hline
+    Traffic NIPS       & H      & The Traffic dataset with additional processing \cite{salinas_high-dimensional_2019}.                                                                                                                                                                              \\
+    \hline
+    Wiki Rolling NIPS  & D      & The Wiki dataset contains the amount of daily views for 2000 pages on Wikipedia \cite{salinas_high-dimensional_2019}.                                                                                                                                             \\
+    \hline
+    Taxi               & 30 Min & Number of taxi rides taken on 1214 locations in New York city every 30 minutes in the month of January 2015. The test set is sampled on January 2016 \cite{salinas_high-dimensional_2019}.                                                                        \\
+    \hline
+    M4 Hourly          & H      & Hourly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                               \\
+    \hline
+    M4 Daily           & D      & Daily timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                                \\
+    \hline
+    M4 Weekly          & W      & Weekly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                               \\
+    \hline
+    M4 Monthly         & M      & Monthly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                              \\
+    \hline
+    M4 Quarterly       & 3M     & Quarterly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                            \\
+    \hline
+    M4 Yearly          & Y      & Yearly timeseries used in the M4 competition randomly sampled from the ForeDeCk database \cite{makridakis_m4_2020}.                                                                                                                                               \\
+    \hline
+    M5 Dataset         & D      & Daily Walmart sales for 3049 products across 10 stores \cite{gluonts-github, m5}.
+  \end{tabular}
+  \caption{Datasets available in GluonTS.}
+  \label{tab:datasets}
 \end{table}
 \clearpage
 \section{Runtool}
@@ -386,9 +368,9 @@ Executing a few training jobs is not especially hard via a simple Python script 
 
 In order to execute training jobs on SageMaker via the runtool there are certain requirements:
 \begin{itemize}
-    \item The ML model needs to be in a SageMaker compliant docker container.
-    \item The dataset has to be in an AWS S3 bucket.
-    \item An IAM role granting the runtool access to the dataset and the docker image.
+  \item The ML model needs to be in a SageMaker compliant docker container.
+  \item The dataset has to be in an AWS S3 bucket.
+  \item An IAM role granting the runtool access to the dataset and the docker image.
 \end{itemize}
 
 A key benefit of the runtool is its use of config files. Through these, it is possible to rerun any experiment with the exact same configuration as long as one has access to the docker container, the dataset and the config file. Due to that the dependencies are built into the docker image any experiment is fully rerunnable with minimum configuration.
@@ -398,7 +380,7 @@ The part of the Runtool which is responsible for starting training jobs is calle
 In figure \ref{fig:example_config} a simple config file is displayed which defines two different algorithms and two datasets. This config is then used in the script presented in figure \ref{fig:example_script}  to create four experiments where both algorithm are executed on both datasets.
 
 \begin{figure}[h]
-    \begin{lstlisting}[language=Python]
+  \begin{lstlisting}[language=Python]
 
 import boto3
 import runtool
@@ -422,14 +404,14 @@ tool = runtool.Client(
 tool.run(my_experiment)  # blocking call
 
 \end{lstlisting}
-    \caption{Python script using the config from figure \ref{fig:example_config} to create four experiments}
-    \label{fig:example_script}
+  \caption{Python script using the config from figure \ref{fig:example_config} to create four experiments}
+  \label{fig:example_script}
 \end{figure}
 \clearpage
 
 
 \begin{figure}
-    \begin{lstlisting}[]
+  \begin{lstlisting}[]
 
 electricity:
     meta:
@@ -462,13 +444,14 @@ algo2:
     image: image_with_algo2
 
 \end{lstlisting}
-    \caption{Config file describing two algorithms and two datasets. \$from inherits the values from another node.}
-    \label{fig:example_config}
+  \caption{Config file describing two algorithms and two datasets. \$from inherits the values from another node.}
+  \label{fig:example_config}
 \end{figure}
 \clearpage
 
 
 \section{Hypothesis testing}
+\label{sec:hypothesis_tests}
 Distributions occur in many areas within nature and science and being able to validate whether different samples come from the same underlying distribution is a long studied problem.  This is known as hypothesis testing and several methods have been developed and one can group these tests into two major families, parametric and non-parametric tests \cite{kim2015t}. Parametric tests are suitable whenever the type of the underlying distribution is known, otherwise non-parametric tests are more suitable.
 
 The Student's T-test is a commonly used hypothesis test which compares the mean values of two distributions and only works if the samples are independent, normal and they have equal variance \cite{kim2015t}. The requirement that the samples should have equal variance can make the T-test unsuitable in practice. However, an alternative to the Student's T-test is the Welch’s T-test which allows for different variance between the two samples being tested. The Welch’s test has however been shown to be unreliable if the two samples being tested have a considerable difference in size and variance \cite{student_or_welch}.

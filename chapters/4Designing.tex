@@ -1,29 +1,111 @@
+\chapter{Designing a benchmarking system}
+\label{cha:designing}
+While the requirements for a fair, accurate and reproducible comparison detailed in Chapter \ref{cha:approach} is not an exhaustive list, they form a bare minimum of what should be expected from a benchmarking system for forecasting models. Some questions require to be investigated further however; Which encapsulation system should be used, what is a suitable hypothesis test for statistical reproducibility, how should distributions of errors be compared and how should a representable subset of datasets be chosen. At the end of this chapter an example architecture for a benchmarking system fulfilling these requirements is presented.
+
+\begin{figure}
+  \begin{tabular}{r|ccccc}
+    Requirement                            &
+    \rothalf{Accurate}                     &
+    \rothalf{Fair}                         &
+    \rothalf{Technically reproducible}     &
+    \rothalf{Statistically reproducible}   &
+    \rothalf{Conceptually reproducible}                        \\
+    \hline
+    Multiple error metrics                 & X &   &   &   &   \\
+    Compare distributions of error metrics & X & X & X & X & X \\
+    Optimally tuned models                 &   & X & X &   &   \\
+    Multiple datasets used                 &   & X &   &   & X \\
+    Public datasets used                   &   &   & X &   & X \\
+    Reference implementations of ML models &   & X & X &   &   \\
+    Use encapsulation tools                &   & X & X &   &   \\
+    Use statistical tests                  &   &   & X &   &   \\
+    Optimally tuned models                 &   &   &   & X &   \\
+    \hline
+  \end{tabular}
+  \caption{Requirements of a benchmarking system.}
+  \label{tab:requirements_summary}
+\end{figure}
+
+\section{Design considerations}
+Due to the popularity and its native capability to encapsulate code and dependencies Docker containers are chosen as the encapsulation tool for this project. An advantage with docker containers is that popular tools such as Github, AWS, Azure and Dockerhub allows for storage and sharing of Docker images which makes it trivial for researchers to distribute their algorithms in a ready to use package.
+
+Docker containers are however not sufficient for complete technical reproducibility as arguments such as hyperparameters or the number of CPU cores should be used can be passed to the containers when training them. If all arguments are not supplied when presenting these algorithms, technical reproducibility becomes hard to achieve. The Runtool described in Section \ref{subsec:runtool} simplifies these things as the config file used when running the experiment can be used by a third party to rerun exactly the same experiment as long as the Docker image and dataset is available.
+
+Reference implementations of complex algorithms are required for fair comparisons, GluonTS which was presented in Section \ref{subsec:gluonts_overview} offers several algorithms ranging from simple naive solutions to highly complex DNN hybrid models. Furthermore, GluonTS offers ready to use Dockerfiles for both CPU and GPU execution of these algorithms. An additional benefit of leveraging GluonTS is that multiple datasets are available for training and testing algorithms on and that multiple error metrics are calculated as part of their backtesting system.
+
+As per the discussion in Section \ref{sec:fair_comparisons} a fair and conceptually reproducible comparison should make use of multiple datasets with different complementary characteristics. GluonTS offers several datasets used in research papers and competitions, and an analysis of these needs to be performed to identify a representable subset. Such an analysis is performed in Section \ref{sec:dataset_analysis}
+
+In order to capture distributions of error metrics, the seed of the encapsulated algorithms should not be set from within the Docker image otherwise rule 2 of figure \ref{fig:reproducibility_requirements} would be violated as each run would be deterministic. Furthermore a suitable statistical test needs to be chosen to enforce rule 3. Three hypothesis tests for comparing distributions for reproducibility purposes were discussed in Section \ref{sec:hypothesis_tests}. However the practical performance of such tests when applied to real world distributions of error metrics need to be examined. Particularly, the amount of data needed for them to be accurate needs to be determined so that suitably large distributions of error metrics are collected when benchmarking. In Section \ref{sec:compairing_hypothesis_tests} such an analysis is performed.
+
+It is normal for benchmarks and competitions to generate tables where different forecasting models are compared using real valued numbers to describe their performance. Normally this number is an error metric \cite{m3_competition,makridakis_m4_2020,m5,hyndman_forecasting_3rd,salinas_deepar_2019,oreshkin_n_beats_2020}. Similarly, it would be suitable if a real number could be used to summarize the distribution of error metrics. The conversion from a distribution to a single number is unlikely to be lossless, however it is important that the conversion should accurately represent the distribution by benefiting errors close to 0 and punishing errors further away. Such a conversion should not be limited by the error metric used in the distribution but be applicable to any error metric as per the requirements in Table \ref{tab:requirements_summary}.
+
+Tuning of algorithms is a requirement for fair comparisons, thus the possibility of hyperparameter tuning should also be available as part of the benchmarking suite. Since many ML models exhibit non-deterministic behaviour, each hyperparameter configuration being tested should be executed multiple times and aggregated, otherwise rule 2 from \ref{fig:reproducibility_requirements} would be violated.
+
+\section{Proposed benchmarking system}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{./img/benchmarking_system_architecture.png}
+  \caption{Proposed benchmarking system.}
+  \label{fig:proposed_benchmarking_system}
+\end{figure}
+
+In figure \ref{fig:proposed_benchmarking_system} an overview of the proposed benchmarking system is displayed. Here the benchmark starts by a user providing the runtool configuration file containing the algorithm to use, the name of the image to use and other data such as which hyperparameters to pass to the algorithm. The system then downloads the datasets identified in \ref{sec:dataset_analysis} to the local machine for later use.
+
+The benchmarking loop is as follows: the algorithm configuration file is first loaded into the runtool and an experiment is generated where the algorithm is executed on each of the datasets \textit{N} times. The value of \textit{N} is determined in Section \ref{sec:compairing_hypothesis_tests}. Each time the algorithm is executed, error metrics are reported by the GluonTS Backtesting functionality and these logs are captured by the Runtool and stored to a file or database for long term storage. This file will be referred to as the \textit{Benchmark Result File} (BRF) for the remainder of the thesis. Along with the distribution of error metrics, the config file used should be stored in the BRF to make it possible to rerun each benchmark.
+
+The latest benchmarks error distribution is then aggregated through some scoring method which summarizes the distribution as a single value. This is then repeated for each previous benchmark which has been run. The resulting scores are then used to rank the algorithms against each other. A table is then presented to the user showing the relative rank of the latest benchmark compared to the previous benchmarks.
+
+\section{Reproducing benchmarks}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{./img/verify_benchmarks.png}
+  \caption{Proposed system for verifying benchmarks.}
+  \label{fig:proposed_validation_system}
+\end{figure}
+
+In order to both technically and statistically be able to reproduce a benchmark a user would need access to the image used and the BRF created by the benchmarking system. Provided these, the verification system could rerun the benchmark using the config file stored in the BRF and the provided image. Rerunning a benchmark with the same setup should result in a similar distribution being generated by the algorithm. Statistically speaking, if the algorithm in the image would be the same as the reference algorithm, both error metric distributions would be sampled from the same underlying distribution. The new distribution can then be compared with that of the benchmark stored in the BRF through a suitable hypothesis test.
+
+\section{Hyperparameter tuning}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{./img/tuning_overview.png}
+  \caption{Proposed system for verifying benchmarks.}
+  \label{fig:proposed_hyperparameter_tuning}
+\end{figure}
+Hyperparameter tuning is a non-trivial task in itself and many advanced solutions exist such as Bayesian hyperparameter search, hyperband search or advanced meta learning approaches \cite{snoek2012practical,feurer2019hyperparameter, li2017hyperband}. The hyperparameter tuning approach proposed here is not intended to supersede these. Instead it focuses on taking the non deterministic output of each run into account when tuning.
+
+The proposed algorithm is in essence a simple grid search tuning algorithm with one major difference. Each configuration in the tuning loop is executed multiple times and then aggregated before being evaluated. Common ML frameworks which offer grid search such as SageMaker or SciKit-Learn (sklearn) surprisingly lack the capability to backtest each configuration multiple times \cite{sagemaker_website, scikit-learn}. While sklearn does offer a cross validation version of its grid search implementation,\textit{GridSearchCV}, this splits the dataset into multiple parts for each iteration. Thus it does not serve the same purpose as performing the backtest multiple times and aggregating the results.
+
+Grid search was chosen as the tuning approach for this system as it is conceptually simple and it is a well known method. It does however have the downside that many unfavorable hyperparameter configurations are evaluated, something which e.g. bayesian search avoids \cite{snoek2012practical}.
+
+An issue with the suggested tuning architecture is that time for tuning increases linearly with the number of repeated runs. Due to this, it may be suitable in real life scenarios to apply this approach as a second step after a set of promising hyperparameter configurations has been identified by another more time efficient approach.
 
 \section{Dataset Analysis}
-It is common that new forecasting methods are compared on several datasets as to showcase their predictive power in different scenarios. Different datasets exhibit different characteristics such as trend and seasonality. By identifying a representable set of datasets with complementary characteristics, one can evaluate how robust a forecasting algorithm is to different datasets. Choosing a representable subset of datasets is also needed as the time to train an algorithm increases linearly with the amount of datasets that it should be trained on. For a empirical comparison such as this, it unfeasible to run training and tuning jobs for all algorithms on all datasets.
+\label{sec:dataset_analysis}
+It is common that new forecasting methods are compared on several datasets as to showcase their predictive power in different scenarios. Different datasets exhibit different characteristics such as trend and seasonality. By identifying a representable set of datasets with complementary characteristics, one can evaluate how robust a forecasting algorithm is to different datasets. Choosing a representable subset of datasets is also needed as the time to train an algorithm increases with the amount of datasets that it should be trained on. For a empirical comparison such as this, it is unfeasible to run training and tuning jobs for all algorithms on all datasets available in GluonTS. In the remainder of this section an analysis of the datasets available in GluonTS is performed in order to identify a representable subset of them with diverse characteristics.
 
 \subsection{Methodology}
 
-For each dataset in GluonTS I generated a plot of the average time series along with one standard deviation from it. This was done in order to get a overview of what the datasets looked like. Plotting timeseries for this purpose is common practice in time series forecasting, or as Hyndaman Et al so eloquently put in Forecasting: Principles and practice: \textit{"The first thing to do in any data analysis task is to plot the data."}.\cite{hyndman_forecasting_3rd}
+For each dataset in GluonTS plots of the average time series along with one standard deviation from it is generated. This is done to get an overview of what the datasets looks like. Plotting timeseries for this purpose is common practice in time series forecasting, or as Hyndaman et.al so eloquently put in Forecasting: Principles and practice: \textit{"The first thing to do in any data analysis task is to plot the data."}.\cite{hyndman_forecasting_3rd}
 
 \begin{figure}[htb]
   \centering
   \minipage{0.45\textwidth}
-  \includegraphics[width=\linewidth]{./img//electricity_violin_unscaled.png}
+  \includegraphics[width=\linewidth]{./img/electricity_violin_unscaled.png}
   \caption{Unscaled violin plot of the electricity dataset}
   \label{fig:electricity_violin_unscaled}
   \endminipage\hfill
   \minipage{0.45\textwidth}
-  \includegraphics[width=\linewidth]{./img//electricity_violin.png}
+  \includegraphics[width=\linewidth]{./img/electricity_violin.png}
   \caption{Scaled violin plot of the electricity dataset where all timeseries have been scaled by their maximum value.}
   \label{fig:electricity_violin_scaled}
   \endminipage\hfill
 \end{figure}
 
+Another common tool for visualising timeseries is to generate a histogram of the timeseries. However as the datasets available in GluonTS contains tens of thousands of timeseries, plotting each of these individually is unfeasible. Instead the average timeseries and one standard deviation of its values is plotted. Another common method for visualizing single timeseries is to generate a histogram of its values \cite{hyndman_forecasting_3rd}. Instead of generating such histograms violin plots are used in as these capture both the distribution of values just as histograms do as well as the median value and the interquartile range. Since each timeseries is on its own scale, the aggregate violin plots are hard to read. By scaling each timeseries in the dataset by the maximum value of that timeseries before plotting it the violin plot becomes more easy to interpret.
 
-Another common tool for visualising timeseries is to generate a histogram of the timeseries. However as the datasets available in GluonTS contains tens of thousands of timeseries, plotting each of these individually is unfeasible. Thus for each dataset I aggregate the timeseries values so that it can be be displayed in a single plot. Instead of generating histograms I choose to generate violin plots as these capture both the distribution of values just as histograms do as well as the median value and the interquartile range. However as each timeseries in a dataset is on its own scale, the aggregate violin plot becomes hard to read. By scaling each timeseries in the dataset by the maximum value of that timeseries before plotting it the violin plot becomes more easy to read.
-
-In addition to these visual tools I calculate the following statistics for each of the datasets in GluonTS:
+In addition to the visual tools the following statistics is calculated for each of the datasets in GluonTS:
 
 \begin{itemize}
   \item Mean value
@@ -37,160 +119,318 @@ In addition to these visual tools I calculate the following statistics for each 
   \item Strength of the seasonality (mean and standard deviation)
 \end{itemize}
 
-Simple metrics such as the maximum, mean and minimum values for a dataset are useful in order to get a high level overview of the dataset. Furthermore, simpler statistics such as these can identify possible issues which can surface further down the line. For example, the metric used when evaluating forecasting methods can become unstable for some values in the dataset. One such example is the MAPE metric, which become unstable for timeseries close to 0 \cite{hyndman_forecasting_3rd}.
+Simple metrics such as the maximum, mean and minimum values for are useful to get a high level overview of the dataset. Further, simpler statistics such as these can identify possible issues which can surface further down the line. For example, the MAPE metric is unstable for timeseries close to zero as a division with zero occurs \cite{hyndman_forecasting_3rd}.
 
-The number of timeseries are important for global models as these then have more data which they can learn across which can help to combat overfitting. The number of timeseries is however not important for local models as these are only impacted by the quality and length of each individual time series. Longer timeseries however, benefit forecasting models which can handle longer horizons \cite{makridakis_m4_2020}. For these reasons, the number of timeseries and the lengths of the shortest and longest timeseries are necessary metrics when comparing datasets. Optimally one would have both long timeseries and many series as this would benefit both global and local models, however this is not always possible.
+The number of timeseries are important for global models as these then have more data which they can learn across which help to combat overfitting. The number of timeseries is however not important for local models as these are only impacted by the quality and length of each individual time series. Longer timeseries however, benefit forecasting models which can handle longer horizons \cite{makridakis_m4_2020}. For these reasons, the number of timeseries and the lengths of the shortest and longest timeseries are necessary metrics when comparing datasets. Optimally one would have both long timeseries and many series as this would benefit both global and local models.
 
-In chapter \ref{sec:dataset_character} we dove into seasonality and trend and how these describe the stationarity of timeseries. The strength of the seasonality and the trend of a timeseries can be calculated by: TODO add the equation here \cite{hyndman_forecasting_3rd}. The trend and the seasonality X and Y in equation Z can be extracted through STL decomposition. In my case I used the STL method of the python Statsmodel package. In order to apply this to an entire dataset, the strengths need to be calculated for each individual timeseries. Thereafter, the average value and standard deviation is recorded. Complimentary datasets should exhibit different values of strength for trend and seasonality. Additionally, the variance of these strengths are important as a higher variance indicates that the timeseries within a dataset are very mixed regarding the strength of trend and seasonality.
+In chapter \ref{cha:chapter2} it was shown that the strength of seasonality and the strength of the trend of timeseries is a useful metric for differentiating timeseries. Thus, calculating the strengths of the timeseries in each dataset provides valuable information about the composition within them.
 
-Four types of datasets could be identified as a representable subset of datasets:
+Since larger datasets make models less prone to overfit, the largest dataset is chosen in case a tie where two datasets are exhibiting the same characteristics. A summary of the criterias on which the datasets are evaluated is shown in Table \ref{dataset_criteria}.
 
-\begin{enumerate}
-  \item One dataset with high trend and low seasonality
-  \item One dataset with low trend and high seasonality
-  \item One dataset with low trend and low seasonality
-  \item One dataset with high trend and high seasonality
-\end{enumerate}
-\label{dataset_criteria}
+\begin{figure}[h]
+  \begin{enumerate}
+    \item One dataset with high trend and low seasonality
+    \item One dataset with low trend and high seasonality
+    \item One dataset with low trend and low seasonality
+    \item One dataset with high trend and high seasonality
+    \item Lower variance of strengths is prefered
+    \item Larger dataset chosen in case of a tie
+  \end{enumerate}
+  \caption{Criteria for identifying a representable subset of datasets.}
+  \label{dataset_criteria}
+\end{figure}
+
 
 \subsubsection{Limitations}
-The M4 dataset does not significantly differ when compared to the m3 dataset except for its size \cite{m3_vs_m4} due to this, and that the m3 dataset has been largely superseeded by the m4 dataset, the m3 dataset was early discarded as the dataset of choice for this comparison.
-Another set of datasets which are not going to be used is the, the NIPS datasets. This is due to them having had some postprocessing applied to them. As the exact post processing is not known, comparing any findings when training on these datasets with other papers becomes hard and introduces uncertainty. In order to avoid this, these datasets are not considered.
+The M4 dataset does not significantly differ to the M3 dataset since except for its size \cite{m3_vs_M4}. due to this, the M3 dataset is not considered in this comparison. Another set of datasets which are not going to be used are the NIPS datasets. This is due to them having had some unclear postprocessing applied to them. As the exact post processing is not known, comparing any findings when training on these datasets with other papers becomes hard and introduces uncertainty.
 
 \subsection{result}
-The complete plots and statistics are available in the appendix as they were to numerous to be displayed here. However a summary of the extracted statistics is presented in XXX.
+In order to calculate the strengths of the trend, seasonality a STL decomposition is needed for each timeseries in the dataset. This decomposistion is done using the STL method of the Statsmodel package in Python \cite{seabold2010statsmodels}. The strengths of each timeseries is then calculated using the formulas in Chapter \ref{cha:chapter2}. In order to summarize the strengths, the average and the standard deviation was then calculated for each dataset.
 
-The strength of the trend and seasonality can be easily viewed by generating a heatmap of the values as can be seen in figure \ref{heatmap_strengths}.
+The complete plots and statistics are available in the appendix as they were to numerous to be displayed here. However a summary of the extracted statistics is presented in Table \ref{tab:dataset_statistics}.
 
-\begin{figure}[htb]
+
+\begin{figure}[h]
   \centering
-  \minipage{0.48\textwidth}
-  \includegraphics[width=\linewidth]{./img//dataset_trend_seasonality_heatmap_mean.png}
-  \caption{Heatmap of the strength of the trend and the seasonality sorted by the size of the datasets.}
-  \endminipage\hfill
-  \minipage{0.48\textwidth}
-  \includegraphics[width=\linewidth]{./img//dataset_trend_seasonality_heatmap_deviation.png}
-  \caption{Heatmap of the standard deviation of the strength of the trend and the seasonality for the datasets.}
-  \endminipage\hfill
+  \pgfplotstabletypeset[
+    color cells={min=0,max=1},
+    col sep=comma,
+    columns/Dataset/.style={reset styles,string type},
+    /pgfplots/colormap={whiteblue}{rgb255(0cm)=(255,255,255); rgb255(1cm)=(2,138,4)},
+    /pgf/number format/.cd,
+    fixed,
+    fixed zerofill,
+    precision=2,
+  ]{
+    Dataset,Trend,Seasonality,Trend Dev., Seasonality Dev.
+    Exchange Rate,1,0.12,0,0.3
+    M4 Daily, 0.98,0.05,0.05,0.1
+    M4 Yearly,0.93,0.09,0.13,0.16
+    M4 Quarterly,0.9,0.2,0.16,0.27
+    M4 Monthly, 0.84,0.32,0.32,0.3
+    M4 Weekly,0.77,0.31,0.31,0.35
+    Electricity,0.65,0.84,0.17,0.19
+    M4 Hourly,0.62,0.88,0.37,0.16
+    Wiki Rolling, 0.53,0.23,0.27,0.26
+    M5,0.38,0.28,0.32,0.33
+    Traffic,0.16,0.67,0.12,0.1
+    Solar Energy, 0.09,0.84,0.03,0.02
+    Taxi,0.02,0.66,0.02,0.08
+  }
+  \caption{Strength of trend \& seasonality for datasets in GluonTS.}
+  \label{heatmap_strengths}
 \end{figure}
-\label{heatmap_strengths}
+There is only one dataset in Table \ref{heatmap_strengths} which exhibits low trend and low seasonality and that is the M5 dataset. However the M5 dataset does show the most variance of all the datasets which implies that it contains many timeseries with and without trend and seasonality. Despite this, since it is the largest dataset available and that there are no other datasets which exhibit low average trend \& seasonality, the M5 dataset is deemed appropriate for use in the benchmarking system.
 
-There is only one dataset in \ref{heatmap_strengths} which exhibits low trend and low seasonality and that is the m5 dataset. However the m5 dataset does show the most variance of all the datasets which implies that it contains many timeseries with and without trend and seasonality.
+\clearpage
+\begin{table}[htb]
+  \begin{tabular}{c | c c c c c c c c c}
+    \rothalf{Dataset} & \rothalf{Mean} & \rothalf{Series} & \rothalf{Items} & \rothalf{Shortest} & \rothalf{Longest} & \rothalf{Min} & \rothalf{Max} & \rothalf{Freq.} \\ [0.5ex]
+    \hline
+    Elec.             & 2510.68        & 321              & 6755124         & 21044              & 21044             & 0.0           & 764000.0      & 1H              \\
+    Elec.             & 2509.92        & 2247             & 47501580        & 21068              & 21212             & 0.0           & 764000.0      & 1H              \\
+    \hline
+    Exch.             & 0.68           & 8                & 48568           & 6071               & 6071              & 0.01          & 2.11          & 1B              \\
+    Exch.             & 0.68           & 40               & 246440          & 6101               & 6221              & 0.01          & 2.11          & 1B              \\
+    \hline
+    Solar             & 40.35          & 137              & 960233          & 7009               & 7009              & 0.0           & 509.05        & 10min           \\
+    Solar             & 40.25          & 959              & 6813695         & 7033               & 7177              & 0.0           & 509.05        & 10min           \\
+    \hline
+    Traf.             & 0.06           & 862              & 12099032        & 14036              & 14036             & 0.0           & 0.72          & H               \\
+    Traf.             & 0.06           & 6034             & 85272488        & 14060              & 14204             & 0.0           & 0.72          & H               \\
+    \hline
+    Exch.*            & 0.68           & 8                & 48568           & 6071               & 6071              & 0.01          & 2.11          & B               \\
+    Exch.*            & 0.68           & 40               & 246440          & 6101               & 6221              & 0.01          & 2.11          & B               \\
+    \hline
+    Elec.*            & 607.95         & 370              & 2142282         & 1081               & 5833              & 0.0           & 168100.0      & H               \\
+    Elec.*            & 652.36         & 2590             & 10340239        & 1105               & 4000              & 0.0           & 168100.0      & H               \\
+    \hline
+    Solar*            & 40.35          & 137              & 960233          & 7009               & 7009              & 0.00          & 509.05        & H               \\
+    Solar*            & 40.25          & 959              & 6813695         & 7033               & 7177              & 0.00          & 509.05        & H               \\
+    \hline
+    Traf.*            & 0.05           & 963              & 3852963         & 4001               & 4001              & 0.00          & 1.00          & H               \\
+    Traf.*            & 0.05           & 6741             & 26964000        & 4000               & 4000              & 0.00          & 1.00          & H               \\
+    \hline
+    Wiki              & 3720.54        & 9535             & 7551720         & 792                & 792               & 0.00          & 7752515.00    & D               \\
+    Wiki              & 3663.55        & 47675            & 40619100        & 792                & 912               & 0.00          & 7752515.00    & D               \\
+    \hline
+    Taxi              & 8.79           & 1214             & 1806432         & 1488               & 1488              & 0.0           & 265.0         & 30min           \\
+    Taxi              & 7.41           & 67984            & 54999056        & 149                & 1469              & 0.0           & 225.0         & 30min           \\
+    % \hline
+    % M3 Mo.            & 4928.47        & 1428             & 141858          & 48                 & 126               & 80.00         & 86730.00      & M                   \\
+    % M3 Mo.            & 4971.28        & 1428             & 167562          & 66                 & 144               & -1200.00      & 86730.00      & M                   \\
+    % \hline
+    % M3 Q              & 4819.27        & 756              & 30956           & 16                 & 64                & 126.00        & 20245.00      & 3M                  \\
+    % M3 Q              & 4983.53        & 756              & 37004           & 24                 & 72                & 121.00        & 20375.00      & 3M                  \\
+    % \hline
+    % M3 Y              & 4417.05        & 645              & 14449           & 14                 & 41                & 30.00         & 39666.22      & 12M                 \\
+    % M3 Y              & 4815.77        & 645              & 18319           & 20                 & 47                & 30.00         & 45525.66      & 12M                 \\
+    % \hline
+    % M3 O              & 6152.18        & 174              & 11933           & 63                 & 96                & 28.00         & 59472.00                            \\
+    % M3 O              & 5999.87        & 174              & 13325           & 71                 & 104               & 28.00         & 59472.00                            \\
+    \hline
+    M4 H              & 6827.69        & 414              & 353500          & 700                & 960               & 10.00         & 703008.00     & H               \\
+    M4 H              & 6859.56        & 414              & 373372          & 748                & 1008              & 10.00         & 703008.00     & H               \\
+    \hline
+    M4 D              & 4951.40        & 4227             & 9964658         & 93                 & 9919              & 15.00         & 352000.00     & D               \\
+    M4 D              & 4960.15        & 4227             & 10023836        & 107                & 9933              & 15.00         & 352000.00     & D               \\
+    \hline
+    M4 W              & 3738.52        & 359              & 366912          & 80                 & 2597              & 104.69        & 51410.00      & W               \\
+    M4 W              & 3755.97        & 359              & 371579          & 93                 & 2610              & 104.69        & 51410.00      & W               \\
+    \hline
+    M4 M              & 4193.28        & 48000            & 10382411        & 42                 & 2794              & 20.00         & 132731.31     & M               \\
+    M4 M              & 4207.51        & 48000            & 11246411        & 60                 & 2812              & 20.00         & 177950.00     & M               \\
+    \hline
+    M4 Q              & 4141.00        & 24000            & 2214108         & 16                 & 866               & 19.50         & 82210.70      & 3M              \\
+    M4 Q              & 4287.13        & 24000            & 2406108         & 24                 & 874               & 19.50         & 82210.70      & 3M              \\
+    \hline
+    M4 Y              & 3630.52        & 23000            & 715065          & 13                 & 300               & 22.10         & 115642.00     & 12M             \\
+    M4 Y              & 4076.24        & 23000            & 852909          & 19                 & 300               & 22.00         & 158430.00     & 12M             \\
+    \hline
+    M5                & 1.12           & 30490            & 57473650        & 1885               & 1885              & 0.00          & 763.00        & D               \\
+    M5                & 1.13           & 30490            & 58327370        & 1913               & 1913              & 0.00          & 763.00        & D               \\
+    \hline
+  \end{tabular}
+  \caption{Statistics of the datasets, top row for each dataset is the train split, the bottom row is the test split.}
+  \label{tab:dataset_statistics}
+\end{table}
+\clearpage
 
-In order to choose a dataset which fits into the category of high seasonality and low trend there are three options; Solar Energy, Taxi and Traffic. Of these the Solar Energy dataset has the lowest variance for both the trend and the seasonality. Further the solar energy dataset shows the highest seasonality of them all.
 
-The datasets with the lowest seasonality and the highest trends are the m4 datasets except for the m4 hourly and the Exchange rate dataset. Of these the one with the lowest variance as well as the highest trend is the Exchange Rate dataset closely followed by the m4 daily dataset. The size of the Exchange Rate dataset is much smaller than the m4 Daily dataset, with only 8 timeseries and 48k datapoints in comparison to the 4227 series and 9.9M datapoints.
+In order to choose a dataset which fits into the category of high seasonality and low trend there are three options; Solar Energy, Taxi and Traffic. Of these the Solar Energy dataset has the lowest variance for both the trend and the seasonality. This in addition to having the second lowest average trend of the three and \~23 \% higher average seasonality than the Taxi and the Traffic datasets makes it most suitable according to the criteria in Figure \ref{dataset_criteria}.
 
-When it comes to finding a dataset which both has a high trend and a high seasonality, there are only two options, the Electricity dataset and the m4 hourly dataset. They both have a high variance, however the variance of the Electricity dataset is slightly lower than that of m4 hourly. In addition, the Electricity dataset has almost twice the amount of datapoints as m4 hourly.
+The datasets with the lowest seasonality and the highest trends are the M4 datasets except for the M4 Hourly as well as the Exchange rate dataset. The one with the lowest variance and the highest trend of these is the Exchange Rate dataset closely followed by the M4 Daily dataset. Since the M4 Daily has lower variance for both strength and seasonality, and since the size of the Exchange Rate dataset is much smaller than the M4 Daily dataset, with only 8 timeseries and 48k datapoints in comparison to the 4227 series and 9.9M datapoints the M4 Daily dataset is more suited for use in the benchmarking system. Furthermore, all other M4 datasets exhibit a higher variance than the M4 Daily which enforces the M4 Daily to a better choice for this comparison.
+
+When it comes to finding a dataset which exhibit both high trend and a high seasonality, there are only two options, the Electricity dataset and the M4 Hourly dataset. They both have a high variance, however the variance of the Electricity dataset is slightly lower than that of M4 Hourly. In addition, the Electricity dataset has almost twice the amount of datapoints as M4 Hourly. Thus the Electricity dataset is chosen as it fits the criteria better.
+
+% \begin{figure}[htb]
+%   \centering
+%   \minipage{0.48\textwidth}
+%   \includegraphics[width=\linewidth]{./img/dataset_trend_seasonality_heatmap_mean.png}
+%   \caption{Heatmap of the strength of the trend and the seasonality sorted by the size of the datasets.}
+%   \endminipage\hfill
+%   \minipage{0.48\textwidth}
+%   \includegraphics[width=\linewidth]{./img/dataset_trend_seasonality_heatmap_deviation.png}
+%   \caption{Heatmap of the standard deviation of the strength of the trend and the seasonality for the datasets.}
+%   \endminipage\hfill
+% \end{figure}  
 
 To summarize the four datasets which most closely fit the criteria defined in \ref{dataset_criteria} are:
 
 \begin{table}[htp]
   \centering
-  \begin{tabular}{ccc} % ccc means 3 columns, all centered; alternatives are l, r
-                           & {\bf Low trend } & {\bf High Trend} \\
-    \hline % draws a line under the column headers
-    {\bf Low seasonality}  & M5               & m4 daily         \\
+  \begin{tabular}{ccc}
+                              & \textbf{Low trend} & \textbf{High Trend} \\
     \hline
-    {\bf High Seasonality} & Solar Energy     & Electricity      \\
+    \textbf{Low seasonality}  & M5                 & M4 Daily            \\
+    \hline
+    \textbf{High Seasonality} & Solar Energy       & Electricity         \\
   \end{tabular}
-  \caption{Datasets with complimentary strength of trend and strength of seasonality}
+  \caption{Datasets with complimentary strengths of trend and seasonality}
   \label{fig:representative_subset_of_datasets}
 \end{table}
 
-\section{Compairing statistical tests for reproducibility}
-\label{subsubsec:choosing-statistical-test}
-In this section the tests are compared in order to answer the questions in \ref{subsec:distributions}. Each of the tests are executed on data collected over 300 runs of DeepAR for three different hyperparameter configurations on the Electricity dataset \ref{fig:deepar_elec_300_hist}. Thus the statistical tests will be evaluated on in total 900 datapoints. In statistical tests are compared across a couple of different criteria.
+\section{Comparing tests for validating forecasting performance}
+\label{sec:compairing_hypothesis_tests}
+This section investigates the performance of three hypothesis tests for use on distributions of error metrics. The investigated tests are the T-test, Welch’s T-Test, the Kolmogorov-Smirnov test.
 
-\begin{itemize}
-  \item Can it accurately identify that two sets of samples are from the same distribution when one of the sets is small.
-  \item Does it have a high false error rate, i.e. does it often mistake to identify samples from the same distribution.
-  \item Does it accurately detect when two distributions has different shape.
-  \item How sensitive is it, i.e. can it detect differences in visually similar distributions.
-\end{itemize}
+GluonTS catches accuracy regressions through checking whether new forecasts are within \(1.645\) standard deviations, i.e. within the 95th percentile of past values \cite{gluonts-github}. This approach is based on the assumption that the distribution of error metrics is normally distributed. If this is True then, this simpler approach may be more suitable than a hypothesis test for reproducibility. Thus this approach will be evaluated along with the hypothesis tests. The questions this section aims to answer are presented in Figure \ref{fig:reproducibility_questions}.
 
-\subsection{Methodology}
-
-\subsection{Results}
-\begin{figure}[htb]
-  \centering
-  \minipage{0.32\textwidth}
-  \includegraphics[width=\linewidth]{./img/histogram_deepar_electricity_statistics_300_samples.png}
-  \caption{Student-T}
-  \label{fig:deepar_student_t_distibution}
-  \endminipage\hfill
-  \minipage{0.32\textwidth}
-  \includegraphics[width=\linewidth]{./img/histogram_deepar_negbin_electricity_statistics_200_samples.png}
-  \caption{Neg-Binomial}
-  \label{fig:deepar_negbinomial_distibution}
-  \endminipage\hfill
-  \minipage{0.32\textwidth}%
-  \includegraphics[width=\linewidth]{./img/histogram_deepar_poisson_electricity_statistics_200_samples.png}
-  \caption{Poisson}
-  \label{fig:deepar_poisson_distribution}
-  \endminipage
-  \caption{\textbf{Histograms of the absolute error for 300 runs of DeepAR on the Electricity dataset} The three plots are generated through 300 runs of DeepAR on the Electricity dataset with three different values of the hyperparameter \emph{distr\_output} see section \ref{algo:deepar} for more info }
-  \label{fig:deepar_elec_300_hist}
+\begin{figure}
+  \begin{itemize}
+    \item Which test functions best for limited data
+    \item Is a parametric test suitable or is a non-parametric test needed
+    \item What is a reasonable sample size
+    \item Which test has the lowest false reject ratio for related distributions
+    \item Is a naive standard deviation based test sufficient
+  \end{itemize}
+  \caption{Questions for identifying a suitable hypothesis test.}
+  \label{fig:reproducibility_questions}
 \end{figure}
 
-As can be seen in \ref{fig:deepar_elec_300_hist} the distribution of the absolute error is skewed and more closely reflects a lognormal distribution than a normal distribution. This contradicts the key assumption made for the T-Test, Welch-s T-test and the naive approach. However as will be shown, these still perform well in the scenarios we consider below.
+\subsection{Methodology}
+\label{hypothesis_test_methodology}
+Several of the questions in Figure \ref{fig:reproducibility_questions} require distributions of error metrics to be collected. For this purpose, the DeepAREstimator presented in Section \ref{algo:deepar} is suitable as it is both quick to train and a non-trivial forecaster. The dataset chosen is the Electricity dataset since it is a medium to small sized dataset, thus shortening the required training time.
 
-TODO write this using some neat mathematical notation.
-Given a small sample N, how does the different methods compare when evaluating if the sample is from the same distribution of another larger sample M? To answer this, I ran each test 297 times (0 <= |M| < 300 - |N|). N contained the 3 data points not in M. M contained {0, 1, ..., 297} samples of the 300 runs.  The results are presented in \ref{fig:false_positives}.
+The Runtool is then used to create 900 experiments where the DeepAREstimator is executed on the Electricity dataset. 300 of these runs has the hyperparameter \textit{distr\_output} set to the default value, 300 runs are executed with \textit{distr\_output} set to use the negative binomial distribution. The remaining 300 runs are executed using the Poisson distribution.
+
+After the distributions are collected, histograms of the distributions are created to identify whether the distributions are visually different. This is done since if all three are visually similar it is unlikely that they can be used for evaluating the hypothesis test on. Further, a visual analysis can determine whether the naive method and or the T-test is suitable since it requires normally distributed data.
+
+After the visual analysis, the ratio of false rejects are calculated, i.e. how often the test is unable to detect that two samples are sampled from the same distribution. To answer this questions, let \(N\) be the total distribution and \(X,Y\) be the two samples drawn from \(N\). The size of \(X\) is then defined by \[k \leq |X| \leq |N| - |Y|\] where \(k\) is a constant value. Similarly, the size of \(Y\) varies between: \[k	\leq |Y| \leq |N|-k\] For each sample of \(X\) and \(Y\) the tests are applied and false negatives are recorded.
+
+In order to evaluate a suitable minimum sample size, heatmaps are generated where the tests are applied to the three distributions with varying sample sizes. Each test is performed with a \(P value\) of 0.05. If the test accepted the samples to be from the same distribution the color green is used while a rejection, is colored red.
+
+\subsection{Results}
+
+\begin{figure}[htb]
+  \centering
+  \minipage{0.49\textwidth}
+  \includegraphics[width=\linewidth]{./img/histogram_deepar_electricity_statistics_300_samples.png}
+  \caption{Student-T}
+  \label{deepar_student_t_distibution}
+  \endminipage\hfill
+  \minipage{0.49\textwidth}
+  \includegraphics[width=\linewidth]{./img/histogram_deepar_negbin_electricity_statistics_200_samples.png}
+  \caption{Neg-Binomial}
+  \label{deepar_negbinomial_distibution}
+  \endminipage\hfill
+  \\
+  \minipage{0.49\textwidth}
+  \includegraphics[width=\linewidth]{./img/histogram_deepar_poisson_electricity_statistics_200_samples.png}
+  \caption{Poisson}
+  \label{deepar_poisson_distribution}
+  \endminipage
+  \caption{Histograms of the absolute error for 300 runs of DeepAR on the Electricity dataset with three different values of the hyperparameter \emph{distr\_output}}
+  \label{deepar_elec_300_hist}
+\end{figure}
+
+
+The histograms shown in Figure \ref{deepar_elec_300_hist} do not resemble a normal distribution. Instead all three histograms are more closely approximating a log normal distribution. Note that the histogram in Figure \ref{deepar_student_t_distibution} and \ref{deepar_negbinomial_distibution} are very similar while the one in Figure \ref{deepar_elec_300_hist} differs. This indicates that different hyperparameter configurations for a single algorithm impacts the error distribution.
+
 
 \begin{table}[htp]
   \centering
-  \begin{tabular}{lcccc} % ccc means 3 columns, all centered; alternatives are l, r
-    {\bf Name}        & {\bf Errors} & {\bf \%} & {\bf Runs} & {\bf configuration} \\
-    \hline % draws a line under the column headers
-    Naive             & 52           & 17\%     & 297        & negative binomial   \\
-    Naive             & 62           & 20\%     & 297        & student t           \\
-    Naive             & 47           & 15\%     & 297        & poisson             \\
+  \begin{tabular}{lcccc}
+    {\textbf Name}    & {\textbf \%} & {\textbf configuration} \\
     \hline
-    T-Test            & 24           & 8\%      & 297        & negative binomial   \\
-    T-Test            & 19           & 6\%      & 297        & student t           \\
-    T-Test            & 4            & 1\%      & 297        & poisson             \\
+    Naive             & $<$1\%       & Negative Binomial       \\
+    Naive             & $<$1\%       & Student T               \\
+    Naive             & $<$1\%       & Poisson                 \\
     \hline
-    Welchs T-Test     & 43           & 14\%     & 297        & negative binomial   \\
-    Welchs T-Test     & 39           & 13\%     & 297        & student t           \\
-    Welchs T-Test     & 23           & 7\%      & 297        & poisson             \\
+    T-Test            & 5\%          & Negative Binomial       \\
+    T-Test            & 5\%          & Student T               \\
+    T-Test            & 32\%         & Poisson                 \\
     \hline
-    Kolmogorv-Smirnov & 15           & 5\%      & 297        & negative binomial   \\
-    Kolmogorv-Smirnov & 18           & 6\%      & 297        & student t           \\
-    Kolmogorv-Smirnov & 3            & 1\%      & 297        & poisson             \\
+    Welchs T-Test     & 11\%         & Negative Binomial       \\
+    Welchs T-Test     & 8\%          & Student T               \\
+    Welchs T-Test     & 31\%         & Poisson                 \\
+    \hline
+    Kolmogorv-Smirnov & 3\%          & Negative Binomial       \\
+    Kolmogorv-Smirnov & 5\%          & Student T               \\
+    Kolmogorv-Smirnov & 21\%         & Poisson                 \\
     \hline
   \end{tabular}
-  \caption{\textbf{False positive rates of statistical tests for one small sample and one larger}}
-  \label{fig:false_positives}
+  \caption{Number of times when the algorithm failed to recognize that the samples were from the same distribution}
+  \label{tab:false_rejects}
 \end{table}
 
-As can be seen in \ref{fig:false_positives} the naive approach have a higher error rate, i.e. it reports that the two distributions are sampled from different distributions more often when compared to the other approaches. The Kolmogorov Smirnov statistic performs the best with the lowest amount of errors out of all the tests.
+In Table \ref{tab:false_rejects} the amount of false rejections of the three hypothesis tests and the naive solution is presented. From this data it is clear that the Naive solution is the best performing with a 1\% chance of failing to validate that the two samples are from the same distribution. The Kolmogorov Smirnov performs second best, however it is incorrect 21\% of the time when evaluating on the distribution generated by the Poisson configuration. The two T-Tests are the worst performers, performing worse than or equal to the Kolmogorov-Smirnov test on all distributions.
 
-Calculating the general false positive rates is done similarly as above, however instead of fixing the size of \emph{N}, it will contain random samples of the remainder after \emph{M} is sampled from the 300 datapoints. I.e. tests will be applied for all combinations of samples where 0 < |\emph{M}| < 300 and 0 < |\emph{N}| < 300-|\emph{M}|
+Since the distributions of error metrics are not reminiscent of the normal distribution, the naive method, the T-test and the Welch's T-test which are parametric tests are unsuitable for use when verifying dataset distributions. The data in table \ref{tab:false_rejects} further enforces this since Kolmogorov-Smirnov is the second best performer for all distributions where only the naive method is better. In Figure \ref{naive_negative_bin_poisson} the naive method is evaluated on the Poisson and Negative Binomial distributions. It is clear from this heatmap that the naive method is prone to accept quite different distributions for all but small sample sizes. This is expected since the distributions investigated all have similar average values even though their distributions differ. In comparison, the Kolmogorov-Smirnov test was able to differentiate all distributions given sufficient sample sizes, see figures \ref{ks_student_t_poisson}, \ref{ks_student_t_neg_bin}, \ref{ks_neg_bin_poisson}.
 
+The sample size required to differentiate between different distributions (true negatives) as well as the sample sizes required for true positives for the Kolmogorov Smirnov test is presented in Table \ref{tab:required_sample_sizes}. This table summarizes the heatmaps generated for the Kolmogorov-Smirnov test when applied to samples of varying sizes from the three distributions as described in \ref{hypothesis_test_methodology}. The heatmaps are available in Appendix \ref{app:heatmaps}
 
 \begin{table}[htp]
   \centering
-  \begin{tabular}{lcccc} % ccc means 3 columns, all centered; alternatives are l, r
-    {\bf Name}        & {\bf Errors} & {\bf \%} & {\bf Runs} & {\bf configuration} \\
-    \hline % draws a line under the column headers
-    Naive             & 241          & <1\%     & 106900     & negative binomial   \\
-    Naive             & 313          & <1\%     & 106900     & student t           \\
-    Naive             & 366          & <1\%     & 106900     & poisson             \\
+  \begin{tabular}{cccc}
+                      & Student T & Poisson & Negative Binomial \\
     \hline
-    T-Test            & 5489         & 5\%      & 106900     & negative binomial   \\
-    T-Test            & 5893         & 5\%      & 106900     & student t           \\
-    T-Test            & 34869        & 32\%     & 106900     & poisson             \\
+    Student T         & \(>50\)   &         &                   \\
     \hline
-    Welchs T-Test     & 12334        & 11\%     & 106900     & negative binomial   \\
-    Welchs T-Test     & 9037         & 8\%      & 106900     & student t           \\
-    Welchs T-Test     & 33971        & 31\%     & 106900     & poisson             \\
+    Poisson           & \(>25\)   & \(>45\) &                   \\
     \hline
-    Kolmogorv-Smirnov & 4250         & 3\%      & 106900     & negative binomial   \\
-    Kolmogorv-Smirnov & 5658         & 5\%      & 106900     & student t           \\
-    Kolmogorv-Smirnov & 23417        & 21\%     & 106900     & poisson             \\
-    \hline
+    Negative Binomial & \(>160\)  & \(>60\) & \(<130\)          \\
   \end{tabular}
-  \caption[False positive rates of statistical tests]{\textbf{False positive rates of statistical tests}}
-  \label{fig:false_positives}
+  \caption{Required sample sizes for the Kolmogorov Smirnov test on three distributions of error metrics.}
+  \label{tab:required_sample_sizes}
 \end{table}
+
+\begin{figure}[h]
+  \centering
+  \minipage{0.7\textwidth}
+  \includegraphics[width=\linewidth]{./img/hypothesis_test/deepar_heatmap_Y_student_t_X_poisson_ks_edited.png}
+  \endminipage
+  \caption{Heatmap of KS for Student-T and Poisson.}
+  \label{ks_student_t_poisson}
+\end{figure}
+\clearpage
+
+From Table \ref{tab:required_sample_sizes} it is shown that the KS test becomes accurate for true positives at a sample size of at least 40 samples. However, it seems as if KS can become unstable for sample sizes above 130. To be able to use the KS statistic to distinguish between different distributions, sample sizes above 160 may be needed if the distributions are visually very similar, otherwise, sample sizes above \(60\) suffice. These values are aligned with the findings of the simulation study performed by Hassani et.al. \ref{hassani2015kolmogorov}. There they showed the need for \(>128\) samples to achieve \(>99\)\% rejection rate for similarly looking distributions.
+
+\begin{figure}[h]
+  \centering
+  \minipage{0.7\textwidth}
+  \includegraphics[width=\linewidth]{./img/hypothesis_test/deepar_heatmap_Y_student_t_X_neg_bin_ks_edited.png}
+  \caption{Heatmap of KS for Student-T and Negative Binomial.}
+  \label{ks_student_t_neg_bin}
+  \endminipage
+\end{figure}
+
+To summarize, despite the limited data available for this comparison, the Naive test, the T-test and Welch’s T-Test has been shown to be unsuitable for comparing distributions of time series forecasting errors due to possible non-normality of the data. When evaluating the Kolmogorov-Smirnov on samples from three different distributions it was shown that \(>60\) samples are required to verify distributions but more than \(160\) may be required to differentiate similar distributions.
+
+
+
+\begin{figure}[h]
+  \centering
+  \minipage{0.65\textwidth}
+  \includegraphics[width=\linewidth]{./img/hypothesis_test/deepar_X_poisson_Y_neg_bin_naive_edited.png}
+  \caption{Heatmap of KS for Negative Binomial and Poisson.}
+  \label{naive_negative_bin_poisson}
+  \endminipage
+  \\
+  \minipage{0.65\textwidth}
+  \includegraphics[width=\linewidth]{./img/hypothesis_test/deepar_heatmap_Y_neg_bin_X_poisson_ks_edited_labels.png}
+  \caption{Heatmap of KS for Negative Binomial and Poisson.}
+  \label{ks_neg_bin_poisson}
+  \endminipage
+\end{figure}
