@@ -12,7 +12,7 @@ A time series is a set of data points with a clear ordering in time. Some exampl
   \endminipage\hfill
   \minipage{0.47\textwidth}
   \includegraphics[width=\linewidth]{./img/electricity_zoomed_3.png}
-  \caption{Electricity consumed by households.}
+  \caption{Household electricity consumption.}
   \label{fig:example_timeseries_electricity}
   \endminipage\hfill
 \end{figure}
@@ -105,6 +105,7 @@ However intuitive the absolute error is, there is a a key issue with this error 
 \end{figure}
 
 \subsubsection{Root Mean Squared Error - RMSE}
+\label{sec:RMSE}
 The root mean squared error is another scale dependent error such as the absolute error. RMSE is calculated by taking the square root of the mean of the squared error. The RMSE thus punishes larger errors more than smaller errors. The RMSE is more complicated to interpret than for example the Absolute Error due to the non-linear nature, despite this, RMSE is widely used in practise \cite{hyndman_forecasting_3rd,gluonts-github}.
 
 \begin{figure}[h]
@@ -362,15 +363,15 @@ GluonTS offers 17 datasets ready to be used for training and evaluation, in tabl
 
 As part of an internship I had at Amazon Web Services (AWS) I created a Python toolkit for creating and executing large scale machine learning experiments. This tool was named \textit{the runtool} and is open sourced as part of the GluonTS sister repository gluon-ts-tools \cite{the_runtool}. Originally the runtool was meant to be a core part of this thesis, however the runtool diverged from the thesis and is now represented here as a third party package.
 
-The runtool works in three parts, first assets such as algorithms and datasets are defined in a YAML config file. This file is then loaded by the runtool from within a python script. Thereafter experiments can be generated via mathematical operators such as + and *. Addition groups algorithms or datasets together into sets and multiplication generates an experiment of the cartesian product of the two sets being multiplied. Finally the runtool starts the generated experiments as training jobs in SageMaker. SageMaker is a cloud service enabling machine learning workloads such as model training and inference to be run on dedicated hardware.
+The runtool works in three parts, first assets such as algorithms and datasets are defined in a YAML config file. This file is then loaded by the runtool from within a python script. Thereafter experiments can be generated via mathematical operators such as + and *. Addition groups algorithms or datasets together into sets and multiplication generates an experiment of the cartesian product of the two sets being multiplied. Finally the runtool starts the generated experiments as training jobs in SageMaker. SageMaker is a cloud service enabling machine learning workloads such as model training and inference to be run on dedicated hardware \cite{sagemaker_website}.
 
 Executing a few training jobs is not especially hard via a simple Python script as there are many powerful libraries available such as GluonTS. However scheduling and dispatching hundreds or thousands of different training jobs in parallel can quickly become complex. This is further complicated when multiple algorithms with different hyperparameter configurations should be evaluated on multiple different datasets. The runtool simplifies these things via so called \$ operators within the config file. These operators enable, for example, inheritance between algorithms or datasets and dynamic updates of values in the config based on what the current experiment is.
 
 In order to execute training jobs on SageMaker via the runtool there are certain requirements:
 \begin{itemize}
   \item The ML model needs to be in a SageMaker compliant docker container.
-  \item The dataset has to be in an AWS S3 bucket.
-  \item An IAM role granting the runtool access to the dataset and the docker image.
+  \item The dataset has to be in an AWS S3 bucket \cite{s3_website}.
+  \item An IAM role granting the runtool access to the dataset and the docker image \cite{}.
 \end{itemize}
 
 A key benefit of the runtool is its use of config files. Through these, it is possible to rerun any experiment with the exact same configuration as long as one has access to the docker container, the dataset and the config file. Due to that the dependencies are built into the docker image any experiment is fully rerunnable with minimum configuration.
@@ -380,7 +381,7 @@ The part of the Runtool which is responsible for starting training jobs is calle
 In figure \ref{fig:example_config} a simple config file is displayed which defines two different algorithms and two datasets. This config is then used in the script presented in figure \ref{fig:example_script}  to create four experiments where both algorithm are executed on both datasets.
 
 \begin{figure}[h]
-  \begin{lstlisting}[language=Python]
+  \begin{lstlisting}[language=Python, label={fig:example_script}, caption={Python script using the config from figure \ref{fig:example_config} to create four experiments}]
 
 import boto3
 import runtool
@@ -390,22 +391,21 @@ config = runtool.load_config("config.yml")
 
 # create an experiment
 my_experiment = (
-    config.myalgo + config.anotherAlgo
-    ) * (config.electricity + config.traffic)
+  config.myalgo + config.anotherAlgo
+  ) * (config.electricity + config.traffic)
 
 # initialize runtool
 tool = runtool.Client(
-    role="arn:aws:iam::012345678901:role/my_role",
-    bucket="my_bucket",
-    session=boto3.Session(),
+  role="arn:aws:iam::012345678901:role/my_role",
+  bucket="my_bucket",
+  session=boto3.Session(),
 )
 
 # dispatch the jobs
 tool.run(my_experiment)  # blocking call
 
-\end{lstlisting}
-  \caption{Python script using the config from figure \ref{fig:example_config} to create four experiments}
-  \label{fig:example_script}
+  \end{lstlisting}
+
 \end{figure}
 \clearpage
 
