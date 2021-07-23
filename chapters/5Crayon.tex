@@ -148,7 +148,7 @@ myalgo:
 \section{Training}
 Given a valid runtool config file Crayon uses this file to start training jobs locally or on AWS SageMaker. The provided config file can be either written by hand or generated using Crayon as described in \ref{'subsub:config_generation'}.
 
-A training job is started by calling the \textit{crayon.run\_config} method with the config. The experiment to run is defined using the mathematical operators + and * as described in section \ref{subsec:runtool}.
+A training job is started by calling the \textit{crayon.run\_config} method with the config. The experiment to run is defined using the mathematical operators + and * as described in Section \ref{subsec:runtool}.
 
 The \textit{crayon.run\_config} function returns a \textit{Jobs} object which makes it easy to investigate training results as it stores all metrics reported by the algorithms across all started jobs to a pandas DataFrame.
 
@@ -332,7 +332,7 @@ grid_search(
   \end{lstlisting}
 \end{figure}
 
-% By setting the \textit{run\_locally} parameter to False we tell Crayon to execute the training on SageMaker instead of locally. In order to make this work, we need to provide the an AWS S3 bucket, an AWS IAM role and a boto3 Session object. See section \ref{sec:cloud_training} for more information about these.
+% By setting the \textit{run\_locally} parameter to False we tell Crayon to execute the training on SageMaker instead of locally. In order to make this work, we need to provide the an AWS S3 bucket, an AWS IAM role and a boto3 Session object. See Section \ref{sec:cloud_training} for more information about these.
 % An example of how grid search can be executed on SageMaker is presented in \ref{code:grid_search_cloud}.
 % \begin{figure}
 %   \begin{lstlisting}[language=Python, label={code:grid_search_cloud}, caption={Grid search running on SageMaker.}]
