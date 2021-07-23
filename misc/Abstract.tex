@@ -1,13 +1,8 @@
 %\thispagestyle{empty}   - 
-%For tips on writing this section, refer \cite{wallwork_177} 
-The abstract should be 1-2 paragraphs. It should include:
-\begin{itemize}
- \item a statement about the problem that was addressed in the thesis,
- \item a specification of the solution approach taken,
- \item a summary of the key findings. 
-\end{itemize}
+%For tips on writing this section, refer \cite{wallwork_177}
+Time series forecasting is an important tool for businesses, organizations and governments as it enables them to plan for the future. Historically, deep learning based forecasting models have been shown to perform poorly compared to classical approaches such as ARIMA, ETS and Theta. In recent years several deep learning based methods has been proposed and thus comparing these fairly and accurately is important. This thesis investigate several state of the art forecasting models, and methods for how to perform fair, accurate and reproducible comparisons. The domain of machine learning research is currently in a reproducibility crisis, thus particular focus is placed on identifying methods for generating technically, statistically and conceptually reproducible results.
 
-For additional recommendations see \cite{wallwork_177}. 
+This thesis also introduces Crayon, an open source benchmarking suite for fair, accurate and reproducible comparisons of forecasting methods. Crayon makes use of distributions of error metrics for its benchmarks and ranks algorithms against each other through a novel aggregation method of error distributions. This method, named RMSE4D, is applicable to any error metric distribution and scores algorithms generating consistent forecasts higher. Furthermore, tooling based on the Kolmogorov-Smirnov 2 sample test is employed in Crayon to enable statistical reproducibility of benchmarks and its practical benefits are demonstrated through protecting a forecasting framwork against accuracy regressions. Crayon is used in this thesis to benchmark 13 state of the art forecasting algorithms on four popular public dataset with complimentary characteristics in terms of trend \& seasonality. The major findings of this comparison is that DeepAR, Transformer and the N-BEATS Ensamble are the best performing models on three of the datasets but that naive and classical approaches such as Theta are the best performing algorithms for highly trended datasets.
 
 \noindent
 %This template is intended to give an introduction of how to write diploma and master thesis at the chair 'Architektur der Vermittlungsknoten' of the Technische Universit�t Berlin. Please don't use the term 'Technical University' in your thesis because this is a proper name. 
