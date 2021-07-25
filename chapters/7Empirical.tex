@@ -1,10 +1,9 @@
 \chapter{Empirical Comparison of Forecasting Methods\label{cha:chapter6}}
 
-This chapter makes use of the tools and concepts investigated in Chapters \ref{cha:approach}, \ref{cha:designing}, \ref{cha:crayon} to perform an empirical comparison of forecasting methods. Specifically, the tuning and benchmarking capabilities of Crayon are used to enable fair, accurate and reproducible comparisons. The forecasting models compared in this Section are those available in Gluon-TS as of March 18th 2021.
-
-
+This chapter makes use of the tools and concepts investigated in Chapters \ref{cha:approach}, \ref{cha:designing}, \ref{cha:crayon} to perform an empirical comparison of forecasting methods. Specifically, the tuning and benchmarking capabilities of Crayon are used to enable fair, accurate and reproducible comparisons. The forecasting models compared in this Section are those available in Gluon-TS as of March 18th 2021. In Section \ref{sec:empirical_method} the methodology employed by this comparison is presented and in Section \ref{sec:empirical_scope} the scope and limitations of the comparison is discussed. The results of the comparison are shown in Section \ref{sec:empirical_result} and important observations, identifed issues and  are thereafter discussed in Section \ref{sec:empirical_discussion}.
 \section{Methodology}
-In order to benchmark the forecasting models in Gluon-TS, Docker images containing Gluon-TS have to be built. For this the official dockerfiles available in Gluon-TS are used.  After the images are built, methods of speeding up backtesting are investigated. This is done since several thousands of training jobs are required to run, thus, minimizing the time to backtest saves days of training time. Three different methods of speedup are investigated; GPU acceleration, multiprocessing on CPU and using ultraJSON (ujson) package for serializing and deserializing JSON data. The ujson package is used by Gluon-TS if installed but is not required as the JSON package from the Python standard library is used by default \cite{gluonts-github}.
+\label{sec:empirical_method}
+In order to benchmark the forecasting models in Gluon-TS, Docker images containing Gluon-TS have to be built. For this the official dockerfiles available in Gluon-TS are used.  After the images are built, methods of speeding up backtesting are investigated. This is done since several thousands of training jobs are required to run, thus, minimizing the time to backtest saves days of training time. Three different methods of speedup are investigated; GPU acceleration, multiprocessing on CPU and using the ultraJSON (ujson) package for serializing and deserializing JSON data. CPU and GPU acceleration is considered as these are the two most most common methods for parallelizing ML workloads and the ujson package is investigated as it is recommended for use by Gluon-TS \cite{gluonts-github}. If usjon is not installed, the JSON package from the Python standard library is used by instead \cite{gluonts-github}.
 
 After identifying a fast performing configuration the algorithms to benchmark are identified. Due to the size of the comparison, and since the time required to tune and benchmark models differ, a priority list is followed. As the focus of the comparison is on DL based forecasting, those methods utilizing DNNs, CNNs or RNNs have the highest priority. Second highest priority are for recent forecasting models not based on DL. Thereafter, naive methods are chosen as these are quick to evaluate and serve as a good baseline to compare to. After the naive models, classical models such as arima are chosen since these only serve as a source of comparison but are not the focal point of this thesis.
 
@@ -38,6 +37,7 @@ The specification of the computer used to backtest the different models and rele
 \end{table}
 
 \section{Scope and Limitations}
+\label{sec:empirical_scope}
 To limit the scope of this investigation, only algorithms available in Gluon-TS were used. Further, only a subset of these could be used due to the time limit of the thesis. As discussed in Section \ref{cha:approach} fair comparisons of advanced algorithms can only be done if the implementations being evaluated are well implemented. Since the algorithms implemented in Gluon-TS are implemented and used by experienced practitioners in the field of forecasting these algorithms are considered to fulfill this criteria. Only algorithms available in Gluon-TS up until commit: \textit{4d1a9a09048b1e0db93de885e9636e4add8f91c6} are used for the comparison, any algorithms added at a later time are not considered \cite{gluonts-github}.
 
 Due to the limited time of the thesis in comparison to the number of algorithms which should be compared, not all algorithms in Gluon-TS can be tuned and benchmarked in time. Further, multivariate algorithms are not compared since Gluon-TS does not offer any multivariate datasets. Further only three multivariate models are available in Gluon-TS, GPVar, GPVar and LSTNet. Any comparisons made with these when executed on the datasets identified in \ref{sec:dataset_analysis} would be unfair since only univariate data would be used to train them.
@@ -45,6 +45,7 @@ Due to the limited time of the thesis in comparison to the number of algorithms 
 Furthermore, since K-fold cross validation primarily is a method for increasing available test data for small datasets it was not applied to the M4 Daily and M5 datasets since they were the the largest and third largest datasets available in Gluon-TS when looking at available train data. This was primarily an optimization tradeoff since even performing a 2-fold cross validation on the M5 dataset would increase the test time by nearly 50\%.
 
 \section{Result}
+\label{sec:empirical_result}
 The initial task of optimizing the Docker images such that they perform well took considerably longer than anticipated. Particularly the use of GPU acceleration was problematic since certain forecasting models such as the \textit{MQCNNEstimator} failed to converge when training. Advice posted on the Gluon-TS Github page suggested that this issue could be resolved by lowering the learning rate, despite this the issue remained \cite{gluonts-github}. Due to the increased instability, GPU acceleration was deemed unsuitable for the comparison.
 
 The use of the Python package \textit{ujson} showed significant speedup and no negative effects were noticed. Thus, \textit{ujson} is added to the Docker images used for benchmarking and tuning.
@@ -119,13 +120,13 @@ After the tuning of the algorithms finished,  the 13 remaining algorithms were b
   \label{tab:mean_ranks}
 \end{table}
 
-As presented in Table \ref{tab:mean_ranks} DeepAR is the algorithm with the best average ranking across all datasets and error metrics. Since DeepAR automatically applies categorical features to the dataset it may have gained an upper hand in this comparison since this data is not part of the datasets used. The source paper of DeepAR evaluates DeepAR on the Electricity dataset, however, the metric used is a modified version of RMSE known as nRMSE which makes it impossible to compare the results as the metrics have different scales. However in the M5 competition, a modified version of DeepAR was the third best performing forecasting algorithm. This reinforces the findings from this research since DeepAR was the second best performer for the M5 dataset on three out of the five error metrics and the fourth best on the MSIS metric.
+As presented in Table \ref{tab:mean_ranks} DeepAR is the algorithm with the best average ranking across all datasets and error metrics. Since DeepAR automatically applies categorical features to the dataset it may have gained an upper hand in this comparison since this data is not part of the datasets used. The source paper of DeepAR evaluates DeepAR on the Electricity dataset, however, the metric used is a modified version of RMSE known as nRMSE which makes it impossible to compare the results as the metrics have different scales. However in the M5 competition, a modified version of DeepAR was the third best performing forecasting algorithm. This reinforces the findings from this research since DeepAR was the second best performer for the M5 dataset on three out of the five error metrics, Tables \ref{tab:benchmark_results_MASE_MAPE} \& \ref{tab:benchmark_results_abs_rmse} and the fourth best on the MSIS metric, see Table \ref{tab:benchmark_results_msis}.
 
-The N-BEATS Ensemble Estimator is the second best performer with an average rank between 2 - 6 across all tested metrics. While it generally performed well, its performance on the M4 Daily dataset was average to poor (between 4-10). This implies that N-BEATS may be unsuited for heavily trended data and may thus benefit from detrending the data beforehand. In the original paper of N-BEATS it is evaluated on the M4 dataset, however not only on the \textit{M4 daily} data as has been done here but on the complete M4 dataset. This in combination with them utilizing a modified MAPE metric (sMAPE) for ranking their results makes comparing results hard. They do however show that N-BEATS perform better than Theta on the M3 dataset. This can be seen in the results from this benchmark as well for the Electricity and Solar Energy datasets. For the M4 Daily dataset, this is however not the case as Theta performs better than N-BEATS for all metrics. Not only is theta better than N-BEATS on the M4 Daily, both of the Naive approaches also outperform N-BEATS and all other DL models for the Absolute Error, MASE and MAPE metrics on the M4 Daily dataset.
+The N-BEATS Ensemble Estimator is the second best performer with an average rank between 2 - 6 across all tested metrics according to Table \ref{tab:mean_ranks}. While it generally performed well, its performance on the M4 Daily dataset was average to poor (between 4-10). This implies that N-BEATS may be unsuited for heavily trended data and may thus benefit from detrending the data beforehand. In the original paper of N-BEATS it is evaluated on the M4 dataset, however not only on the \textit{M4 daily} data as has been done here but on the complete M4 dataset. This in combination with them utilizing a modified MAPE metric (sMAPE) for ranking their results makes comparing results hard. They do however show that N-BEATS perform better than Theta on the M3 dataset. This can be seen in the results from this benchmark as well for the Electricity and Solar Energy datasets. For the M4 Daily dataset, this is however not the case as Theta performs better than N-BEATS for all metrics. Not only is theta better than N-BEATS on the M4 Daily, both of the Naive approaches also outperform N-BEATS and all other DL models for the Absolute Error, MASE and MAPE metrics on the M4 Daily dataset, see Tables \ref{tab:benchmark_results_MASE_MAPE} \& \ref{tab:benchmark_results_abs_rmse}.
 
-The Transformer forecaster is the third best ranked algorithm and has the 2nd best MSIS score of all tested algorithms after DeepAR and Simple Feed Forward which is the fourth best performing algorithm. This indicates that these two algorithms sacrifice specificity of forecasts in exchange for better coverage of the probability intervals. I.e. their forecasts are less often spot on but rarely very wrong. It is surprising that SimpleFF ranked so high in this comparison as it outperformed more sophisticated DL approaches like the MQCNN, MQRNN and DeepFactor with its simple neural architecture. Furthermore, the performance of the SimpleFF also outperformed the C-RNN architecture despite C-RNN containing LSTM cells which tends to be better for temporal data such as time series. Possibly, C-RNN overfit to the datasets when tuning as the hyperparameters configuration found when tuning were larger neural nets with more cells for the smaller datasets and smaller nets for the larger datasets. For the datasets where C-RNN performed worst, \textit{M4 Daily \& Electricity} 210 cells were used compared to 100 for \textit{M5 \& Solar Energy}.
+The Transformer forecaster is the third best ranked algorithm and has the 2nd best MSIS score (see Table \ref{tab:benchmark_results_msis}) of all tested algorithms after DeepAR and Simple Feed Forward which is the fourth best performing algorithm. This indicates that these two algorithms sacrifice specificity of forecasts in exchange for better coverage of the probability intervals. I.e. their forecasts are less often spot on but rarely very wrong. It is surprising that SimpleFF ranked so high in this comparison as it outperformed more sophisticated DL approaches like the MQCNN, MQRNN and DeepFactor with its simple neural architecture. Furthermore, the performance of the SimpleFF also outperformed the C-RNN architecture despite C-RNN containing LSTM cells which tends to be better for temporal data such as time series. Possibly, C-RNN overfit to the datasets when tuning as the hyperparameters configuration found when tuning were larger neural nets with more cells for the smaller datasets and smaller nets for the larger datasets. For the datasets where C-RNN performed worst, \textit{M4 Daily \& Electricity} 210 cells were used compared to 100 for \textit{M5 \& Solar Energy}.
 
-MQCCN was the fifth best performing algorithm, with a mean rank of 6.15. It should be noted that the MSIS error was not reported by Gluon-TS for either MQCNN or MQRNN and that their ranks suffered as a result. This is counterintuitive as both of these produce probabilistic forecasts which means calculating the MSIS should be without issues. Recalculating the mean rank for these two algorithms without MSIS would cause MQCNN to have a mean rank of 5.19 and MQRNN 8.875 instead of 8.95, thus, their overall ranks would remain the same in this comparison. One possible reason why these two models are not ranked higher in this comparison is due to the lack of exogenous data when training the model. In the original paper of these algorithms, the authors manually added calendar features such as holidays and which day of the week each datapoint in the datasets were recorded on \cite{wen_multi-horizon_2018}.
+MQCCN was the fifth best performing algorithm, with a mean rank of 6.15. It should be noted that the MSIS error was not reported by Gluon-TS for either MQCNN or MQRNN and that their ranks suffered as a result, see Table \ref{tab:benchmark_results_msis}. This is counterintuitive as both of these produce probabilistic forecasts which means calculating the MSIS should be without issues. Recalculating the mean rank for these two algorithms without MSIS, i.e., using the data in Tables \ref{tab:benchmark_results_MASE_MAPE} \& \ref{tab:benchmark_results_abs_rmse} would cause MQCNN to have a mean rank of 5.19 and MQRNN 8.875 instead of 8.95, thus, their overall ranks would remain the same in this comparison. One possible reason why these two models are not ranked higher is due to the lack of exogenous data when training the model. In the original paper of these algorithms, the authors manually added calendar features such as holidays and which day of the week each datapoint in the datasets were recorded on \cite{wen_multi-horizon_2018}.
 
 The Theta Forecaster was developed to function well for the M3 dataset, thus, it is not surprising that it performs the best of all tested models on the M4 dataset as the M4 dataset is similar in composition to the M3 dataset but larger \cite{m3_vs_M4}. The performance of Thetaf was however in the bottom 50\% for the other datasets, which indicates that while it performs well for datasets having high trend and low seasonality, such as the M4,  it does not generalize well to datasets with other characteristics. Particularly this is seen for highly seasonal datasets such as the Solar Energy dataset and the Electricity datasets where theta performs in the bottom 50\%.
 
@@ -147,30 +148,31 @@ The S-Naive forecaster performed well on the Electricity and the M4 daily datase
 
 The second naive model, Naive2, crashed on the Electricity dataset due to it utilizing multiplicative decomposition of time series which is not suitable for time series data close to 0. The API for this model in Gluon-TS does not support additive decomposition, thus not much could be done to fix this. The average rank of the Naive2 method was 8.10 which makes it that fourth worst performing method of the ones tested.
 
-The low rank of DeepFactor contradicts the results from its original paper as there, DeepFactor, outperformed DeepAR on average while in Table \ref{tab:mean_ranks} DeepAR outperforms all other algorithms. This further enforces the benefit of automatically adding exogenous variables such as calendar days and holidays to the data like DeepAR does. The original paper of DeepFactor also compares it against MQRNN and Prophet, their findings do align with the results of this comparison since DeepAR has a better average rank than both. However, Prophet did not have time to finish the benchmark on the \textit{M5} and \textit{Electricity} datasets so comparing these only by looking at the mean ranks is not fair. Comparing the mean ranks of DeepFactor and Prophet across all metrics for the Solar Energy and the M4 Daily datasets tells a similar story where DeepFactor recieves an average rank of \(10+11.5+10+9.5+9=10\) and Prophet receives the mean rank \(12+12+12+10+6.5=10.5\). Thus, for this comparison, DeepFactor is only marginally better than Prophet.
+The low rank of DeepFactor contradicts the results from its original paper as there, DeepFactor, outperformed DeepAR on average while in Table \ref{tab:mean_ranks} DeepAR outperforms all other algorithms. This further enforces the benefit of automatically adding exogenous variables such as calendar days and holidays to the data like DeepAR does. The original paper of DeepFactor also compares it against MQRNN and Prophet, their findings do align with the results of this comparison since DeepAR has a better average rank than both. However, Prophet did not have time to finish the benchmark on the \textit{M5} and \textit{Electricity} datasets. Thus, comparing DeepFactor with Prophet only by looking at the mean ranks across all dataset is not fair as the average rank of Prophet is inflated by the last place ranks caused by not being ranked on a dataset. If Prophet would not have been the last algorithm to be benchmarked for this comparison it would likely have produced some error metrics for these datasets. Thus, Prophet is a special case in this comparison and should be compared only on those datasets it finished on since it was not responsible for not concluding the benchmarking on time. Comparing the mean ranks of DeepFactor and Prophet across all metrics for the Solar Energy and the M4 Daily datasets tells a similar story where DeepFactor recieves an average rank of \(10+11.5+10+9.5+9=10\) and Prophet receives the mean rank \(12+12+12+10+6.5=10.5\) see Tables \ref{tab:benchmark_results_MASE_MAPE}, \ref{tab:benchmark_results_abs_rmse} and \ref{tab:benchmark_results_msis} for the values used in this calculation. Thus, for this comparison, DeepFactor is only marginally better than Prophet.
 
 The Gaussian Process (GP) forecasting method was ranked second last, with Prophet in the last place. The GP method was likely suboptimally tuned as the kernel used for creating the Gaussian Processes could not be specified through the Gluon-TS shell when tuning. This may have led to a subpar kernel being used for the benchmark.
+
 
 \begin{table}[htb]
   \centering
   \begin{tabular}{ccccccc}
-    Algorithm   & \rothalf{Electricity} & \rothalf{Solar Energy} & \rothalf{M4 Daily} & \rothalf{M5} & \rothalf{Mean rank} \\
+    Algorithm   & \rothalf{Electricity}         & \rothalf{Solar Energy}        & \rothalf{M4 Daily}             & \rothalf{M5}                   & \rothalf{Mean rank} \\
     \hline
-    \multicolumn{6}{c}{\cellcolor{gray!25}MSIS}                                                                            \\
+    \multicolumn{6}{c}{\cellcolor{gray!25}MSIS}                                                                                                                         \\
     \hline
-    DeepAR      & 6.44 (1)              & 8.55 (2)               & 43.13 (2)          & 32.58 (4)    & 2.25                \\\hline
-    SimpleFF    & 10.64 (3)             & 14.78 (3)              & 36.33 (1)          & 26.49 (2)    & 2.25                \\\hline
-    Transformer & 6.85 (2)              & 6.41 (1)               & 49.15 (3)          & 35.38 (5)    & 2.75                \\\hline
-    C-RNN       & 21.96 (4)             & 46.74 (6)              & 105.21 (4)         & 31.41 (3)    & 4.25                \\\hline
-    N-BEATS     & 33.35 (5)             & 46.50 (5)              & 137.24 (8)         & 57.74 (6)    & 6.00                \\\hline
-    DeepFactor  & 479.13 (9)            & 53.17 (7)              & 928.47 (11)        & 20.78 (1)    & 7.00                \\\hline
-    Thetaf      & 47.02 (7)             & 97.08 (11)             & 130.49 (5)         & 69.13 (7)    & 7.50                \\\hline
-    S-Naive     & 35.25 (6)             & 97.07 (9)              & 131.14 (7)         & 81.28 (9)    & 7.75                \\\hline
-    Prophet     & nan (10)              & 20.84 (4)              & 166.84 (9)         & nan (10)     & 8.25                \\\hline
-    Naive2      & nan (10)              & 97.07 (10)             & 131.14 (6)         & 81.28 (8)    & 8.50                \\\hline
-    GP          & 126.45 (8)            & 84.13 (8)              & 185.82 (10)        & nan (10)     & 9.00                \\\hline
-    MQRNN       & nan (10)              & nan (12)               & nan (12)           & nan (10)     & 11.00               \\\hline
-    MQCNN       & nan (10)              & nan (12)               & nan (12)           & nan (10)     & 11.00               \\\hline
+    DeepAR      & \cellcolor{green!100}6.44 (1) & \cellcolor{green!70}8.55 (2)  & \cellcolor{green!70}43.13 (2)  & \cellcolor{green!30}32.58 (4)  & 2.25                \\\hline
+    SimpleFF    & \cellcolor{green!50}10.64 (3) & \cellcolor{green!50}14.78 (3) & \cellcolor{green!100}36.33 (1) & \cellcolor{green!70}26.49 (2)  & 2.25                \\\hline
+    Transformer & \cellcolor{green!70}6.85 (2)  & \cellcolor{green!100}6.41 (1) & \cellcolor{green!50}49.15 (3)  & 35.38 (5)                      & 2.75                \\\hline
+    C-RNN       & \cellcolor{green!30}21.96 (4) & 46.74 (6)                     & \cellcolor{green!30}105.21 (4) & \cellcolor{green!50}31.41 (3)  & 4.25                \\\hline
+    N-BEATS     & 33.35 (5)                     & 46.50 (5)                     & 137.24 (8)                     & 57.74 (6)                      & 6.00                \\\hline
+    DeepFactor  & 479.13 (9)                    & 53.17 (7)                     & \cellcolor{red!10}928.47 (11)  & \cellcolor{green!100}20.78 (1) & 7.00                \\\hline
+    Thetaf      & 47.02 (7)                     & \cellcolor{red!10}97.08 (11)  & 130.49 (5)                     & 69.13 (7)                      & 7.50                \\\hline
+    S-Naive     & 35.25 (6)                     & 97.07 (9)                     & 131.14 (7)                     & 81.28 (9)                      & 7.75                \\\hline
+    Prophet     & \cellcolor{red!70}nan (10)    & \cellcolor{green!30}20.84 (4) & 166.84 (9)                     & \cellcolor{red!70}nan (10)     & 8.25                \\\hline
+    Naive2      & \cellcolor{red!70}nan (10)    & \cellcolor{red!30}97.07 (10)  & 131.14 (6)                     & 81.28 (8)                      & 8.50                \\\hline
+    GP          & 126.45 (8)                    & 84.13 (8)                     & \cellcolor{red!30}185.82 (10)  & \cellcolor{red!70}nan (10)     & 9.00                \\\hline
+    MQRNN       & \cellcolor{red!70}nan (10)    & \cellcolor{red!70}nan (12)    & \cellcolor{red!70}nan (12)     & \cellcolor{red!70}nan (10)     & 11.00               \\\hline
+    MQCNN       & \cellcolor{red!70}nan (10)    & \cellcolor{red!70}nan (12)    & \cellcolor{red!70}nan (12)     & \cellcolor{red!70}nan (10)     & 11.00               \\\hline
   \end{tabular}
   \caption{Benchmark results of 100 runs aggregated using RMSE4D with respects to the MSIS error metric. Ranks within a dataset shown in parentheses.}
   \label{tab:benchmark_results_msis}
@@ -180,38 +182,38 @@ The Gaussian Process (GP) forecasting method was ranked second last, with Prophe
 \begin{table}[htb]
   \centering
   \begin{tabular}{ccccccc}
-    Algorithm   & \rothalf{Electricity} & \rothalf{Solar Energy} & \rothalf{M4 Daily} & \rothalf{M5} & \rothalf{Mean rank} \\
+    Algorithm   & \rothalf{Electricity}         & \rothalf{Solar Energy}        & \rothalf{M4 Daily}            & \rothalf{M5}                  & \rothalf{Mean rank} \\
     \hline
-    \multicolumn{6}{c}{\cellcolor{gray!25}MASE}                                                                            \\
+    \multicolumn{6}{c}{\cellcolor{gray!25}MASE}                                                                                                                       \\
     \hline
-    N-BEATS     & 0.83 (3)              & 1.16 (2)               & 3.43 (4)           & 1.44 (1)     & 2.50                \\\hline
-    DeepAR      & 0.75 (1)              & 1.17 (3)               & 3.81 (7)           & 1.48 (2)     & 3.25                \\\hline
-    Transformer & 0.82 (2)              & 1.13 (1)               & 4.26 (8)           & 1.50 (3)     & 3.50                \\\hline
-    SimpleFF    & 0.92 (5)              & 1.27 (4)               & 3.48 (5)           & 1.54 (5)     & 4.75                \\\hline
-    MQCNN       & 1.22 (7)              & 1.50 (5)               & 3.51 (6)           & 1.55 (6)     & 6.00                \\\hline
-    Thetaf      & 1.18 (6)              & 2.43 (11)              & 3.26 (1)           & 1.73 (8)     & 6.50                \\\hline
-    S-Naive     & 0.88 (4)              & 2.43 (10)              & 3.28 (2)           & 2.03 (11)    & 6.75                \\\hline
-    C-RNN       & 2.24 (8)              & 1.60 (6)               & 4.31 (9)           & 1.52 (4)     & 6.75                \\\hline
-    Naive2      & nan (12)              & 2.43 (9)               & 3.28 (3)           & 2.03 (10)    & 8.50                \\\hline
-    MQRNN       & 11.19 (10)            & 1.71 (7)               & 57.94 (13)         & 1.58 (7)     & 9.25                \\\hline
-    DeepFactor  & 12.02 (11)            & 1.84 (8)               & 23.64 (12)         & 1.85 (9)     & 10.00               \\\hline
-    GP          & 3.18 (9)              & 2.45 (12)              & 4.69 (10)          & nan (12)     & 10.75               \\\hline
-    Prophet     & nan (12)              & 3.26 (13)              & 11.96 (11)         & nan (12)     & 12.00               \\\hline
-    \multicolumn{6}{c}{\cellcolor{gray!25}MAPE}                                                                            \\
+    N-BEATS     & 0.83(3) \cellcolor{green!50}  & 1.16(2) \cellcolor{green!70}  & 3.43(4) \cellcolor{green!30}  & 1.44(1) \cellcolor{green!100} & 2.50                \\\hline
+    DeepAR      & 0.75(1) \cellcolor{green!100} & 1.17(3) \cellcolor{green!50}  & 3.81 (7)                      & 1.48(2) \cellcolor{green!70}  & 3.25                \\\hline
+    Transformer & 0.82(2) \cellcolor{green!70}  & 1.13(1) \cellcolor{green!100} & 4.26 (8)                      & 1.50(3) \cellcolor{green!50}  & 3.50                \\\hline
+    SimpleFF    & 0.92 (5)                      & 1.27(4) \cellcolor{green!30}  & 3.48 (5)                      & 1.54 (5)                      & 4.75                \\\hline
+    MQCNN       & 1.22 (7)                      & 1.50 (5)                      & 3.51 (6)                      & 1.55 (6)                      & 6.00                \\\hline
+    Thetaf      & 1.18 (6)                      & \cellcolor{red!30} 2.43 (11)  & 3.26(1) \cellcolor{green!100} & 1.73 (8)                      & 6.50                \\\hline
+    S-Naive     & 0.88(4) \cellcolor{green!30}  & \cellcolor{red!10} 2.43 (10)  & 3.28(2) \cellcolor{green!70}  & \cellcolor{red!50} 2.03 (11)  & 6.75                \\\hline
+    C-RNN       & 2.24 (8)                      & 1.60 (6)                      & 4.31 (9)                      & 1.52(4) \cellcolor{green!30}  & 6.75                \\\hline
+    Naive2      & \cellcolor{red!70} nan (12)   & 2.43 (9)                      & 3.28(3) \cellcolor{green!50}  & \cellcolor{red!30} 2.03 (10)  & 8.50                \\\hline
+    MQRNN       & \cellcolor{red!30} 11.19 (10) & 1.71 (7)                      & \cellcolor{red!70} 57.94 (13) & 1.58 (7)                      & 9.25                \\\hline
+    DeepFactor  & \cellcolor{red!50} 12.02 (11) & 1.84 (8)                      & \cellcolor{red!50} 23.64 (12) & 1.85 (9)                      & 10.00               \\\hline
+    GP          & 3.18 (9)                      & \cellcolor{red!50} 2.45 (12)  & \cellcolor{red!10} 4.69 (10)  & \cellcolor{red!70} nan (12)   & 10.75               \\\hline
+    Prophet     & \cellcolor{red!70} nan (12)   & \cellcolor{red!70} 3.26 (13)  & \cellcolor{red!30} 11.96 (11) & \cellcolor{red!70} nan (12)   & 12.00               \\\hline
+    \multicolumn{6}{c}{\cellcolor{gray!25}MAPE}                                                                                                                       \\
     \hline
-    Thetaf      & 0.18 (6)              & 1.00 (1)               & 0.04 (3)           & 0.65 (1)     & 2.75                \\\hline
-    S-Naive     & 0.14 (4)              & 1.00 (3)               & 0.04 (1)           & 0.88 (11)    & 4.75                \\\hline
-    N-BEATS     & 0.13 (3)              & 2.84 (7)               & 0.05 (5)           & 0.82 (7)     & 5.50                \\\hline
-    MQCNN       & 0.22 (7)              & 2.15 (6)               & 0.05 (4)           & 0.79 (5)     & 5.50                \\\hline
-    SimpleFF    & 0.14 (5)              & 2.96 (8)               & 0.05 (6)           & 0.79 (4)     & 5.75                \\\hline
-    Naive2      & nan (12)              & 1.00 (2)               & 0.04 (2)           & 0.88 (10)    & 6.50                \\\hline
-    DeepAR      & 0.10 (1)              & 3.29 (10)              & 0.05 (7)           & 0.87 (9)     & 6.75                \\\hline
-    Transformer & 0.10 (2)              & 3.27 (9)               & 0.06 (8)           & 0.86 (8)     & 6.75                \\\hline
-    C-RNN       & 0.30 (8)              & 4.92 (12)              & 0.06 (9)           & 0.79 (3)     & 8.00                \\\hline
-    MQRNN       & 1.01 (11)             & 1.03 (4)               & 0.42 (13)          & 0.82 (6)     & 8.50                \\\hline
-    DeepFactor  & 0.99 (10)             & 4.09 (11)              & 0.20 (12)          & 0.70 (2)     & 8.75                \\\hline
-    GP          & 0.34 (9)              & 1.09 (5)               & 0.06 (10)          & nan (12)     & 9.00                \\\hline
-    Prophet     & nan (12)              & 8.22 (13)              & 0.15 (11)          & nan (12)     & 12.00               \\\hline
+    Thetaf      & 0.18 (6)                      & 1.00(1) \cellcolor{green!100} & 0.04(3) \cellcolor{green!50}  & 0.65(1) \cellcolor{green!100} & 2.75                \\\hline
+    S-Naive     & 0.14(4) \cellcolor{green!30}  & 1.00(3) \cellcolor{green!50}  & 0.04(1) \cellcolor{green!100} & \cellcolor{red!50} 0.88 (11)  & 4.75                \\\hline
+    N-BEATS     & 0.13(3) \cellcolor{green!50}  & 2.84 (7)                      & 0.05 (5)                      & 0.82 (7)                      & 5.50                \\\hline
+    MQCNN       & 0.22 (7)                      & 2.15 (6)                      & 0.05(4) \cellcolor{green!30}  & 0.79 (5)                      & 5.50                \\\hline
+    SimpleFF    & 0.14 (5)                      & 2.96 (8)                      & 0.05 (6)                      & 0.79(4) \cellcolor{green!30}  & 5.75                \\\hline
+    Naive2      & \cellcolor{red!70} nan (12)   & 1.00(2) \cellcolor{green!70}  & 0.04(2) \cellcolor{green!70}  & \cellcolor{red!30} 0.88 (10)  & 6.50                \\\hline
+    DeepAR      & 0.10(1) \cellcolor{green!100} & \cellcolor{red!10} 3.29 (10)  & 0.05 (7)                      & 0.87 (9)                      & 6.75                \\\hline
+    Transformer & 0.10(2) \cellcolor{green!70}  & 3.27 (9)                      & 0.06 (8)                      & 0.86 (8)                      & 6.75                \\\hline
+    C-RNN       & 0.30 (8)                      & \cellcolor{red!50} 4.92 (12)  & 0.06 (9)                      & 0.79(3) \cellcolor{green!50}  & 8.00                \\\hline
+    MQRNN       & \cellcolor{red!50} 1.01 (11)  & 1.03(4) \cellcolor{green!30}  & \cellcolor{red!70} 0.42 (13)  & 0.82 (6)                      & 8.50                \\\hline
+    DeepFactor  & \cellcolor{red!30} 0.99 (10)  & \cellcolor{red!30} 4.09 (11)  & \cellcolor{red!50} 0.20 (12)  & 0.70(2) \cellcolor{green!70}  & 8.75                \\\hline
+    GP          & 0.34 (9)                      & 1.09 (5)                      & \cellcolor{red!10} 0.06 (10)  & \cellcolor{red!70} nan (12)   & 9.00                \\\hline
+    Prophet     & \cellcolor{red!70} nan (12)   & \cellcolor{red!70} 8.22 (13)  & \cellcolor{red!30} 0.15 (11)  & \cellcolor{red!70} nan (12)   & 12.00               \\\hline
   \end{tabular}
   \caption{Benchmark results of 100 runs aggregated using RMSE4D with respect to the MASE and MAPE metrics. Ranks within a dataset shown in parentheses.}
   \label{tab:benchmark_results_MASE_MAPE}
@@ -224,44 +226,45 @@ The Gaussian Process (GP) forecasting method was ranked second last, with Prophe
 \begin{table}[htb]
   \centering
   \begin{tabular}{ccccccc}
-    Algorithm   & \rothalf{Electricity} & \rothalf{Solar Energy} & \rothalf{M4 Daily} & \rothalf{M5} & \rothalf{Mean rank} \\
+    Algorithm   & \rothalf{Electricity}             & \rothalf{Solar Energy}          & \rothalf{M4 Daily}                & \rothalf{M5}                    & \rothalf{Mean rank} \\
     \hline
-    \multicolumn{6}{c}{\cellcolor{gray!25}Absolute Error}                                                                  \\
+    \multicolumn{6}{c}{\cellcolor{gray!25}Absolute Error}                                                                                                                         \\
     \hline
-    N-BEATS     & 8869733 (1)           & 336976 (2)             & 11201583 (5)       & 811248 (1)   & 2.25                \\\hline
-    DeepAR      & 9327671 (4)           & 339306 (3)             & 12135357 (7)       & 844784 (2)   & 4.00                \\\hline
-    Transformer & 9263741 (3)           & 328560 (1)             & 13681491 (9)       & 869196 (5)   & 4.50                \\\hline
-    MQCNN       & 13805770 (7)          & 432799 (5)             & 11070810 (4)       & 856588 (3)   & 4.75                \\\hline
-    SimpleFF    & 9531230 (5)           & 369138 (4)             & 11234445 (6)       & 904818 (7)   & 5.50                \\\hline
-    S-Naive     & 8962995 (2)           & 708874 (10)            & 10701169 (2)       & 1152816 (11) & 6.25                \\\hline
-    Thetaf      & 13089580 (6)          & 708907 (11)            & 10512352 (1)       & 912691 (8)   & 6.50                \\\hline
-    C-RNN       & 29287248 (8)          & 465076 (6)             & 13542748 (8)       & 861390 (4)   & 6.50                \\\hline
-    Naive2      & nan (12)              & 708874 (9)             & 10701169 (3)       & 1152816 (10) & 8.50                \\\hline
-    MQRNN       & 121965994 (10)        & 499512 (7)             & 205836216 (13)     & 880390 (6)   & 9.00                \\\hline
-    DeepFactor  & 128561908 (11)        & 531101 (8)             & 72334786 (12)      & 1025815 (9)  & 10.00               \\\hline
-    GP          & 38069033 (9)          & 715938 (12)            & 15070775 (10)      & nan (12)     & 10.75               \\\hline
-    Prophet     & nan (12)              & 950621 (13)            & 40508217 (11)      & nan (12)     & 12.00               \\\hline
-    \multicolumn{6}{c}{\cellcolor{gray!25}RMSE}                                                                            \\
+    N-BEATS     & 8869733(1) \cellcolor{green!100}  & 336976(2) \cellcolor{green!70}  & 11201583 (5)                      & 811248(1) \cellcolor{green!100} & 2.25                \\\hline
+    DeepAR      & 9327671(4) \cellcolor{green!30}   & 339306(3) \cellcolor{green!50}  & 12135357 (7)                      & 844784(2) \cellcolor{green!70}  & 4.00                \\\hline
+    Transformer & 9263741(3) \cellcolor{green!50}   & 328560(1) \cellcolor{green!100} & 13681491 (9)                      & 869196 (5)                      & 4.50                \\\hline
+    MQCNN       & 13805770 (7)                      & 432799 (5)                      & 11070810(4) \cellcolor{green!30}  & 856588(3) \cellcolor{green!50}  & 4.75                \\\hline
+    SimpleFF    & 9531230 (5)                       & 369138(4) \cellcolor{green!30}  & 11234445 (6)                      & 904818 (7)                      & 5.50                \\\hline
+    S-Naive     & 8962995(2) \cellcolor{green!70}   & \cellcolor{red!10} 708874 (10)  & 10701169(2) \cellcolor{green!70}  & \cellcolor{red!50} 1152816 (11) & 6.25                \\\hline
+    Thetaf      & 13089580 (6)                      & \cellcolor{red!30} 708907 (11)  & 10512352(1) \cellcolor{green!100} & 912691 (8)                      & 6.50                \\\hline
+    C-RNN       & 29287248 (8)                      & 465076 (6)                      & 13542748 (8)                      & 861390(4) \cellcolor{green!30}  & 6.50                \\\hline
+    Naive2      & \cellcolor{red!70} nan (12)       & 708874 (9)                      & 10701169(3) \cellcolor{green!50}  & \cellcolor{red!30} 1152816 (10) & 8.50                \\\hline
+    MQRNN       & \cellcolor{red!30} 121965994 (10) & 499512 (7)                      & \cellcolor{red!70} 205836216 (13) & 880390 (6)                      & 9.00                \\\hline
+    DeepFactor  & \cellcolor{red!50} 128561908 (11) & 531101 (8)                      & \cellcolor{red!50} 72334786 (12)  & 1025815 (9)                     & 10.00               \\\hline
+    GP          & 38069033 (9)                      & \cellcolor{red!50} 715938 (12)  & \cellcolor{red!10} 15070775 (10)  & \cellcolor{red!70} nan (12)     & 10.75               \\\hline
+    Prophet     & \cellcolor{red!70} nan (12)       & \cellcolor{red!70} 950621 (13)  & \cellcolor{red!30} 40508217 (11)  & \cellcolor{red!70} nan (12)     & 12.00               \\\hline
+    \multicolumn{6}{c}{\cellcolor{gray!25}RMSE}                                                                                                                                   \\
     \hline
-    DeepAR      & 1752.89 (5)           & 30.81 (3)              & 637.84 (2)         & 2.28 (2)     & 3.00                \\\hline
-    N-BEATS     & 1177.71 (2)           & 30.53 (2)              & 748.49 (10)        & 2.21 (1)     & 3.75                \\\hline
-    Transformer & 1399.50 (4)           & 29.55 (1)              & 677.32 (5)         & 2.53 (7)     & 4.25                \\\hline
-    SimpleFF    & 1229.84 (3)           & 35.58 (4)              & 672.66 (3)         & 2.79 (8)     & 4.50                \\\hline
-    MQCNN       & 1850.22 (6)           & 39.29 (5)              & 672.82 (4)         & 2.31 (3)     & 4.50                \\\hline
-    Thetaf      & 1936.66 (7)           & 62.51 (10)             & 630.09 (1)         & 2.43 (5)     & 5.75                \\\hline
-    C-RNN       & 4629.80 (8)           & 41.28 (6)              & 745.09 (8)         & 2.39 (4)     & 6.50                \\\hline
-    S-Naive     & 1139.93 (1)           & 62.52 (13)             & 705.42 (6)         & 3.30 (11)    & 7.75                \\\hline
-    MQRNN       & 13405.46 (10)         & 45.92 (8)              & 5443.89 (13)       & 2.53 (6)     & 9.25                \\\hline
-    DeepFactor  & 13505.91 (11)         & 42.26 (7)              & 2192.18 (12)       & 2.97 (9)     & 9.75                \\\hline
-    GP          & 6113.39 (9)           & 62.52 (11)             & 747.68 (9)         & nan (12)     & 10.25               \\\hline
-    Naive2      & nan (12)              & 62.52 (12)             & 705.42 (7)         & 3.30 (10)    & 10.25               \\\hline
-    Prophet     & nan (12)              & 53.51 (9)              & 1464.99 (11)       & nan (12)     & 11.00               \\\hline
+    DeepAR      & 1752.89 (5)                       & 30.81(3) \cellcolor{green!50}   & 637.84(2) \cellcolor{green!70}    & 2.28(2) \cellcolor{green!70}    & 3.00                \\\hline
+    N-BEATS     & 1177.71(2) \cellcolor{green!70}   & 30.53(2) \cellcolor{green!70}   & \cellcolor{red!10} 748.49 (10)    & 2.21(1) \cellcolor{green!100}   & 3.75                \\\hline
+    Transformer & 1399.50(4) \cellcolor{green!30}   & 29.55(1) \cellcolor{green!100}  & 677.32 (5)                        & 2.53 (7)                        & 4.25                \\\hline
+    SimpleFF    & 1229.84(3) \cellcolor{green!50}   & 35.58(4) \cellcolor{green!30}   & 672.66(3) \cellcolor{green!50}    & 2.79 (8)                        & 4.50                \\\hline
+    MQCNN       & 1850.22 (6)                       & 39.29 (5)                       & 672.82(4) \cellcolor{green!30}    & 2.31(3) \cellcolor{green!50}    & 4.50                \\\hline
+    Thetaf      & 1936.66 (7)                       & \cellcolor{red!10} 62.51 (10)   & 630.09(1) \cellcolor{green!100}   & 2.43 (5)                        & 5.75                \\\hline
+    C-RNN       & 4629.80 (8)                       & 41.28 (6)                       & 745.09 (8)                        & 2.39(4) \cellcolor{green!30}    & 6.50                \\\hline
+    S-Naive     & 1139.93(1) \cellcolor{green!100}  & \cellcolor{red!70} 62.52 (13)   & 705.42 (6)                        & \cellcolor{red!50} 3.30 (11)    & 7.75                \\\hline
+    MQRNN       & \cellcolor{red!30} 13405.46 (10)  & 45.92 (8)                       & \cellcolor{red!70} 5443.89 (13)   & 2.53 (6)                        & 9.25                \\\hline
+    DeepFactor  & \cellcolor{red!50} 13505.91 (11)  & 42.26 (7)                       & \cellcolor{red!50} 2192.18 (12)   & 2.97 (9)                        & 9.75                \\\hline
+    GP          & 6113.39 (9)                       & \cellcolor{red!30} 62.52 (11)   & 747.68 (9)                        & \cellcolor{red!70} nan (12)     & 10.25               \\\hline
+    Naive2      & \cellcolor{red!70} nan (12)       & \cellcolor{red!50} 62.52 (12)   & 705.42 (7)                        & \cellcolor{red!30} 3.30 (10)    & 10.25               \\\hline
+    Prophet     & \cellcolor{red!70} nan (12)       & 53.51 (9)                       & \cellcolor{red!30} 1464.99 (11)   & \cellcolor{red!70} nan (12)     & 11.00               \\\hline
   \end{tabular}
   \caption{Benchmark results of 100 runs aggregated using RMSE4D with respect to the Absolute Error and RMSE metrics. Ranks within a dataset shown in parentheses.}
   \label{tab:benchmark_results_abs_rmse}
 \end{table}
 
 \section{Discussion}
+\label{sec:empirical_discussion}
 The overall result of this empirical comparison of forecasting methods showed that DeepAR, N-BEATS and the Transformer forecasting methods are the best performing forecasting methods out of the 13 investigated. Furthermore, statistical and naive models were the strongest performer for the \textit{M4 Daily} dataset but underperformed compared to DL based forecasting methods on the \textit{Solar Energy, M5} and \textit{Electricity} datasets. Essentially, the \textit{"No Free Lunch"} theorem is demonstrated by these results as none of the benchmarked algorithms were the best on all datasets for a single metric or on all metrics for a single dataset.
 
 A learning from this result is that exogenous variables should be added to atleast some datasets used by Crayon when benchmarking as this would improve the fairness when comparing the methods. Perhaps multiple versions of each dataset could exists, both with and without preproccessing and exogenous variables. It should be noted that ease of achieving strong performance for a forecasting algorithm also should be prioritized by the creators of the algorithms. This goes along the philosophy of DeepAR and Prophet which both focused on making the algorithms easy to use.
