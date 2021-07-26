@@ -202,6 +202,34 @@
 }
 
 \usepackage{amssymb}
+\usepackage{float}
+\usepackage{aliascnt}
+\newaliascnt{eqfloat}{equation}
+\newfloat{eqfloat}{h}{eqflts}
+\floatname{eqfloat}{Equation}
+
+\newcommand*{\ORGeqfloat}{}
+\let\ORGeqfloat\eqfloat
+\def\eqfloat{%
+  \let\ORIGINALcaption\caption
+  \def\caption{%
+    \addtocounter{equation}{-1}%
+    \ORIGINALcaption
+  }%
+  \ORGeqfloat
+}
+
+\usepackage{caption}
+\usepackage{subcaption}
+
+
+
+
+
+
+
+
+
 \begin{document}
 
 \frontmatter
@@ -270,7 +298,7 @@
 
 
 %algorithms
-\listofalgorithms
+%\listofalgorithms
 \addcontentsline{toc}{chapter}{List of Algorithms}
 
 %In case, code fragments have to be added

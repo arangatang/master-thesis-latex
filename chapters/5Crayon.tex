@@ -3,20 +3,20 @@
 
 In this section Crayon, a Python toolkit for benchmarking ML forecasting models, is introduced. Crayon contains a set of tools for making fair, accurate and reproducible comparisons between forecasting models. Crayon is open sourced and available on GitHub under the MIT license \cite{crayon_github}.
 
-Crayon is based on the benchmarking architecture presented in chapter \ref{cha:designing}. Technically reproducible results are made through the use of three core technologies; Runtool configuration files for defining reproducible training jobs, Docker images containing the algorithm to benchmark and the public datasets available through Gluon-TS. In order to make benchmarks statistically reproducible, error metrics generated from benchmarks can be automatically compared through the Kolmogorov-Smirnov 2 sample hypothesis test. Crayon is error metric agnostic, meaning that any error metrics required for a certain domain can be used, thus enabling accurate comparisons between models. Additionally, the RMSE4D aggregation method presented in Chapter \ref{cha:designing} is used to rank distributions of error metrics.
+Crayon is based on the benchmarking architecture presented in Chapter \ref{cha:designing}. Technically reproducible results are made through the use of three core technologies; Runtool configuration files for defining reproducible training jobs, Docker images containing the algorithm to benchmark and the public datasets available through Gluon-TS. In order to make benchmarks statistically reproducible, error metrics generated from benchmarks can be automatically compared through the Kolmogorov-Smirnov 2 sample hypothesis test. Crayon is error metric agnostic, meaning that any error metrics required for a certain domain can be used, thus enabling accurate comparisons between models. Additionally, the RMSE4D aggregation method presented in Chapter \ref{cha:designing} is used to rank distributions of error metrics.
 
-Since it is common that machine learning workloads are executed in the cloud, as well as locally, both options are supported by Crayon. Since the runtool only supports executing training jobs in AWS SageMaker a custom backend is implemented for local execution.
+Since it is common that machine learning workloads are executed in the cloud, as well as locally, both options are supported by Crayon. Since the Runtool only supports executing training jobs in AWS SageMaker a custom backend is implemented for local execution.
 
 \section{Architecture}
 
 This section introduces the overall architecture of Crayon and important modules and concepts are briefly explained.
-Crayon has three basic buliding blocks, \textit{Algorithm objects} \textit{Dataset objects} and \textit{Runtool configuration files} (configs). Algorithm objects and Dataset objects is an abstraction simplifying the writing of runtool config file for users and are used internally to generate one or more runtool configuration files. These generated configuration files have a single purpose, to enable technically reproducible benchmarks. In Figure \ref{fig:crayon_architecture} an overview of the five most important modules of Crayon is shown; Benchmarking, Verification, Scoring and the Tuning module. Furthermore, the central use of the BRF described in Chapter \ref{cha:designing} is shown.
+Crayon has three basic buliding blocks, \textit{Algorithm objects} \textit{Dataset objects} and \textit{Runtool configuration files} (configs). Algorithm objects and Dataset objects is an abstraction simplifying the writing of Runtool config file for users and are used internally to generate one or more Runtool configuration files. These generated configuration files have a single purpose, to enable technically reproducible benchmarks. In Figure \ref{fig:crayon_architecture} an overview of the five most important modules of Crayon is shown; Benchmarking, Verification, Scoring and the Tuning module. Furthermore, the central use of the BRF described in Chapter \ref{cha:designing} is shown.
 
-The Benchmarking functionality showed on top in Figure \ref{fig:crayon_architecture} takes the path to runtool configuration file and uses the algorithm specified within it to generate four new config files, one for each dataset the algorithm should be benchmarked on. 100 backtests are then executed using each config to generate distributions of error metrics. These backtests can then be executed locally in a sequential manner or in parallel on AWS SageMaker. The recorded error distributions are then stored together with the config file to a BRF to enable statistical and technical reproducibility of the benchmark. After the benchmark is finished, the scoring functionality in Crayon is used to score the distribution of error metrics using the RMSE4D of the error distributions. This score is then ranked against the RMSE4D score of any other benchmarks stored in the BRF which used the same error metric.
+The Benchmarking functionality showed on top in Figure \ref{fig:crayon_architecture} takes the path to Runtool configuration file and uses the algorithm specified within it to generate four new config files, one for each dataset the algorithm should be benchmarked on. 100 backtests are then executed using each config to generate distributions of error metrics. These backtests can then be executed locally in a sequential manner or in parallel on AWS SageMaker. The recorded error distributions are then stored together with the config file to a BRF to enable statistical and technical reproducibility of the benchmark. After the benchmark is finished, the scoring functionality in Crayon is used to score the distribution of error metrics using the RMSE4D of the error distributions. This score is then ranked against the RMSE4D score of any other benchmarks stored in the BRF which used the same error metric.
 
 Verifying benchmark performance leverages the statistical and technical reproducibility of the benchmarks in the BRF. Since the config used for previous benchmarks is stored in the BRF, a third party can repeat a benchmark as long as the docker image used and the BRF is available. After a benchmark is repeated, the verify module in Crayon can be used to assert statistical reproducibility through applying the kolmogorov smirnov 2 sample test on the two benchmarks error distributions. If the test passed, statistical reproducibility is achieved.
 
-Since optimally tuned models are required for fair comparison as per the discussion in Chapter \ref{cha:designing}, grid search with repeated runs is implemented in Crayon. Grid search utilizes Algorithm and Dataset objects and a grid of hyperparameters to test. Provided these assets, the grid search generates one runtool config for each hyperparameter configuration and backtests it multiple times before aggregating the runs and evaluating the performance. After tuning finishes, the path to the best config is presented to the user.
+Since optimally tuned models are required for fair comparison as per the discussion in Chapter \ref{cha:designing}, grid search with repeated runs is implemented in Crayon. Grid search utilizes Algorithm and Dataset objects and a grid of hyperparameters to test. Provided these assets, the grid search generates one Runtool config for each hyperparameter configuration and backtests it multiple times before aggregating the runs and evaluating the performance. After tuning finishes, the path to the best config is presented to the user.
 
 This section introduced the high level workings of Crayon, the remainder of this chapter dives further into the features of Crayon with practical examples of various methods and tools.
 
@@ -32,7 +32,7 @@ This section introduced the high level workings of Crayon, the remainder of this
 
 \section{Algorithms}
 \label{crayon:algorithms}
-In crayon, the \textit{Algorithms} class contains all the information needed in order to execute an algorithm contained in a Docker image stored either on AWS ECR or on the local machine. \textit{Algorithm} objects are the basic building blocks for performing hyperparameter tuning and for creating runtool configuration files.
+In crayon, the \textit{Algorithms} class contains all the information needed in order to execute an algorithm contained in a Docker image stored either on AWS ECR or on the local machine. \textit{Algorithm} objects are the basic building blocks for performing hyperparameter tuning and for creating Runtool configuration files.
 
 An \textit{Algorithm} object contains information about the \textit{image} to run, the \textit{hyperparameters} to use. If the algorithm should be executed on SageMaker, the specific instance it should be run on can also be set using the \textit{instance} parameter. The \textit{Algorithm} class also optionally accepts a dictionary of regexes to the \textit{metrics} parameter. These regexes are used by SageMaker to extract metrics from an algorithms output. Default regexes for Gluon-TS algorithms are available in the \textit{crayon.utils} module. This parameter is not required when executing locally. In Listing \ref{code:algorithm} an example is shown of how the \textit{Algorithm} class is used.
 
@@ -71,14 +71,14 @@ Dataset(
 \end{figure}
 \section{Config Generation}
 \label{'subsub:config_generation'}
-This section discusses the different tools available in Crayon in order to create runtool compatible config files. These config files are a core part of the Crayon functionality and is used in several internal systems. Thus it is important to understand how these are generated and look like. For further information about how the config files function and additional functionality of them, see the section about the runtool (\ref{subsec:runtool}).
+This section discusses the different tools available in Crayon in order to create Runtool compatible config files. These config files are a core part of the Crayon functionality and is used in several internal systems. Thus it is important to understand how these are generated and look like. For further information about how the config files function and additional functionality of them, see the section about the Runtool (\ref{subsec:runtool}).
 
-Through providing a \textit{Algorithm} object \& a \textit{Dataset} object to the \textit{generate\_config} function in Crayon, a configuration file compatible with the runtool is generated. The intention of this file is that by providing the config, the image used and the dataset to another person, that person could rerun your experiments with the exact same configuration. Internally Crayon uses the \textit{generate\_config} function in order to create tuning and benchmarking training jobs. See \ref{code:config_generation} for an example.
+Through providing a \textit{Algorithm} object \& a \textit{Dataset} object to the \textit{generate\_config} function in Crayon, a configuration file compatible with the Runtool is generated. The intention of this file is that by providing the config, the image used and the dataset to another person, that person could rerun your experiments with the exact same configuration. Internally Crayon uses the \textit{generate\_config} function in order to create tuning and benchmarking training jobs. See \ref{code:config_generation} for an example.
 \begin{figure}
   \begin{lstlisting}[language=Python, label={code:config_generation}, caption={Config generation using Crayon}]
 from crayon import Algorithm, Dataset, generate_config
 
-# generate runtool configuration file
+# generate Runtool configuration file
 config = generate_config(
   Algorithm(
     name="myalgo",
@@ -123,7 +123,7 @@ If one does not have a custom dataset but instead wishes to use a reference data
 from crayon import Algorithm, Dataset, generate_config, get_gluonts_datasets
 import yaml
 
-# generate runtool configuration file
+# generate Runtool configuration file
 config = generate_config(
   Algorithm(
     name="myalgo",
@@ -169,7 +169,7 @@ myalgo:
 
 
 \section{Training}
-Given a valid runtool config file Crayon uses this file to start training jobs locally or on AWS SageMaker. The provided config file can be either written by hand or generated using Crayon as described in \ref{'subsub:config_generation'}.
+Given a valid Runtool config file Crayon uses this file to start training jobs locally or on AWS SageMaker. The provided config file can be either written by hand or generated using Crayon as described in \ref{'subsub:config_generation'}.
 
 A training job is started by calling the \textit{crayon.run\_config} method with the config. The experiment to run is defined using the mathematical operators + and * as described in Section \ref{subsec:runtool}.
 
@@ -207,7 +207,7 @@ jobs = run_config(
 \end{figure}
 
 
-By executing the code in Code Fragment \ref{code:local_training} Crayon will use the runtool to load the config in \ref{config:local_training} and start training jobs locally through the \textit{local\_run} method of the runtool. The jobs will be executed sequentially. After the jobs finish, Crayon looks for a file named \textit{agg\_metrics.json} or \textit{metrics.json} in the output directory for each job. This file is expected to contain any metrics reported by the algorithm being trained. An example json file is shown in \ref{output:local_job_output} for reference.
+By executing the code in Code Fragment \ref{code:local_training} Crayon will use the Runtool to load the config in \ref{config:local_training} and start training jobs locally through the \textit{local\_run} method of the Runtool. The jobs will be executed sequentially. After the jobs finish, Crayon looks for a file named \textit{agg\_metrics.json} or \textit{metrics.json} in the output directory for each job. This file is expected to contain any metrics reported by the algorithm being trained. An example json file is shown in \ref{output:local_job_output} for reference.
 
 \begin{figure}
   \begin{lstlisting}[label={output:local_job_output}, caption=Example of a training job output file such as \textit{metrics.json} or \textit{agg\_metrics.json}]
@@ -282,7 +282,7 @@ Grid search is a common strategy used when tuning algorithm. When tuning using g
 Below I present how an algorithm can be tuned using the grid-search functionality in Crayon.
 
 \subsection{Grid-Search}
-Grid search is done using the \textit{grid\_search} function in the \textit{Crayon.Tuner} module. The \textit{grid\_search} function is implemented based on the architecture suggested in \ref{sec:hpo} with some additional features. Since multiple runs of an algorithm generates a small distribution of values, the method used for aggregating these is customizable, per default the mean is taken. Further, since different metrics may optimize towards different values, a custom method for comparing values can be passed, per default lower aggregate errors are better. Each hyperparameter configuration generated by \textit{grid\_search} is stored into a runtool configuration file. This simplifes the benchmarking of a tuned algorithm as the generated runtool config file can be used directly by the \textit{crayon.benchmark} method presented in Section \ref{subsec:benchmarking}.
+Grid search is done using the \textit{grid\_search} function in the \textit{Crayon.Tuner} module. The \textit{grid\_search} function is implemented based on the architecture suggested in \ref{sec:hpo} with some additional features. Since multiple runs of an algorithm generates a small distribution of values, the method used for aggregating these is customizable, per default the mean is taken. Further, since different metrics may optimize towards different values, a custom method for comparing values can be passed, per default lower aggregate errors are better. Each hyperparameter configuration generated by \textit{grid\_search} is stored into a Runtool configuration file. This simplifes the benchmarking of a tuned algorithm as the generated Runtool config file can be used directly by the \textit{crayon.benchmark} method presented in Section \ref{subsec:benchmarking}.
 
 An overview of the features of the \textit{grid\_search} module is displayed in Figure \ref{features_grid_search}:
 
@@ -292,7 +292,7 @@ An overview of the features of the \textit{grid\_search} module is displayed in 
     \item Each hyperparameter combination can be rerun multiple times to handle non-deterministic algorithms
     \item Allows passing a custom function for aggregating error metrics from jobs.
     \item Allows passing of a custom scoring function for evaluating jobs.
-    \item Generates runtool configuration files for each combination of hyperparameters.
+    \item Generates Runtool configuration files for each combination of hyperparameters.
   \end{itemize}
   \caption{Features of the grid search functionality in Crayon.}
   \label{features_grid_search}
@@ -402,7 +402,7 @@ grid_search(
 \label{subsec:benchmarking}
 One of the key components of Crayon is the benchmarking module. This module compares algorithms by backtesting them on four datasets with different characteristics; \textit{M5}, \textit{M4 Daily}, \textit{Electricity} and \textit{Solar Energy}. These datasets were chosen since they exhibit complimentary characteristics as per the discussion in \ref{sec:dataset_analysis}.
 
-To benchmark an algorithm via Crayon a config file describing the algorithm needs to be passed. Furthermore, one must pass which target metric should be the target for the benchmark, i.e. absolute error, MASE, MAPE or any other metric reported by the benchmarked algorithm. Crayon then backtests the algorithm on each dataset 100 times in order to build up a distribution of the target metric. The value 100 was chosen as it is in the middle of the boundraries identified in Section \ref{sec:compairing_hypothesis_tests}. After the error metric distributions have been generated, RMSE4D described in Section \ref{sec:ranking_distributions} is used to compare the errors from the benchmark with previously run benchmarks. A lower value of RMSE4D is better.
+To benchmark an algorithm via Crayon a config file describing the algorithm needs to be passed. Furthermore, one must pass which target metric should be the target for the benchmark, i.e., absolute error, MASE, MAPE or any other metric reported by the benchmarked algorithm. Crayon then backtests the algorithm on each dataset 100 times in order to build up a distribution of the target metric. The value 100 was chosen as it is in the middle of the boundraries identified in Section \ref{sec:compairing_hypothesis_tests}. After the error metric distributions have been generated, RMSE4D described in Section \ref{sec:ranking_distributions} is used to compare the errors from the benchmark with previously run benchmarks. A lower value of RMSE4D is better.
 
 As the benchmark is run on multiple datasets, it is important to provide tuned models for each. This is done by appending the dataset name to the algorithm name in the config file so that each algorithm defined in the config file has the structure: \(<algorithm\_name>\_<dataset\_name>\). In Code Fragment \ref{config:benchmarking} an example config file for benchmarking is presented. Note the two hyperparameter configurations of DeepAR in the config, this indicates that different hyperparameters is used for the electricity dataset.
 
